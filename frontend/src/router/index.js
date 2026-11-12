@@ -12,7 +12,7 @@ import DetailView from '../views/DetailView.vue'
 
 // Configuración central: relaciona cada URL con la vista que debe mostrar.
 export default createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   // Cada cambio de vista empieza al inicio de la página.
   scrollBehavior: () => ({ top: 0 }),
   routes: [
