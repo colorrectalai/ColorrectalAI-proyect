@@ -225,9 +225,9 @@ La **Matriz de Trazabilidad de Requisitos** vincula cada requisito con su caso d
 |---|---|
 | Edwin Cabezas Cuero | Líder del proyecto |
 | Camilo Steban Mutis Arango | Líder de desarrollo y QA |
-| Alejandro Guzman Posada | Integrante (backend y modelo de IA) |
-| Juan Stevan Loza Gutiérrez | Integrante |
-| Juan Fernando Sánchez Hoyos | Integrante |
+| Alejandro Guzman Posada | Desarrollador (backend y modelo de IA) |
+| Juan Stevan Loza Gutiérrez | Desarrollador UI |
+| Juan Fernando Sánchez Hoyos | Planificador |
 | Jair Enrique Castro Sanclemente | Docente, gerente del proyecto y patrocinador |
 
 ## Aviso importante
