@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: colorrectalai-api
+    runtime: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /api/v1/salud
+    envVars:
+      - key: MODELO_URL          # enlace al asset .onnx en GitHub Releases
+        sync: false
+      - key: MODELO_SHA256       # el que imprime el Colab (registro_experimento.json)
+        sync: false
+      - key: MODELO_VERSION
+        value: baseline-0.1
+      - key: CORS_ORIGENES       # URL del frontend en GitHub Pages
+        sync: false

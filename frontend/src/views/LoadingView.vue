@@ -1,26 +1,47 @@
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BrandLogo from '../components/BrandLogo.vue'
+import { analizarImagen } from '../api'
+import { estado } from '../store'
 
 const router = useRouter()
+const hechas = ref(0)
+const error = ref('')
+const total = computed(() => estado.archivos.length)
+const porcentaje = computed(() => (total.value ? Math.round((hechas.value / total.value) * 100) : 0))
 
-// Simula unos segundos de análisis y luego dirige a los resultados de demostración.
-onMounted(() => {
-  setTimeout(() => router.replace('/resultados/A-DEMO-003'), 1900)
+// Envía cada imagen a la API, una tras otra, y al terminar muestra los resultados.
+onMounted(async () => {
+  if (!total.value) return router.replace('/carga')
+  estado.resultados = []
+  try {
+    for (const archivo of estado.archivos) {
+      const respuesta = await analizarImagen(archivo)
+      estado.resultados.push({ nombre: archivo.name, url: URL.createObjectURL(archivo), respuesta })
+      hechas.value++
+    }
+    estado.id = 'A-' + estado.resultados[0].respuesta.id.slice(0, 6).toUpperCase()
+    router.replace('/resultados/' + estado.id)
+  } catch (e) {
+    error.value = e.message
+  }
 })
 </script>
 
 <template>
   <!-- Capa oscura que enfoca la atención en el cuadro de progreso. -->
   <div class="modal-screen">
-    <!-- Diálogo con el logo, el mensaje informativo y la barra animada. -->
     <div class="progress-dialog">
       <BrandLogo />
-      <h2>Analizando imágenes</h2>
-      <p>ColorrectalAI es una herramienta académica experimental. Sus resultados pueden contener errores y no constituyen un diagnóstico médico.</p>
-      <div class="progress-track"><i></i></div>
-      <small>En curso · 64%</small>
+      <h2>{{ error ? 'No se pudo completar el análisis' : 'Analizando imágenes' }}</h2>
+      <p v-if="error" class="fallo">{{ error }}</p>
+      <p v-else>ColorrectalAI es una herramienta académica experimental. Sus resultados pueden contener errores y no constituyen un diagnóstico médico.</p>
+      <template v-if="!error">
+        <div class="progress-track"><i :style="{ width: Math.max(porcentaje, 8) + '%' }"></i></div>
+        <small>En curso · {{ hechas }} de {{ total }} imágenes</small>
+      </template>
+      <RouterLink v-else class="button volver" to="/carga">Volver a cargar</RouterLink>
     </div>
   </div>
 </template>
@@ -76,11 +97,10 @@ onMounted(() => {
 }
 .progress-track i {
   display:block;
-  width:64%;
   height:100%;
   border-radius:inherit;
   background:var(--brand-bright);
-  animation:progress 1.8s linear forwards;
+  transition:width .35s ease;
 }
 .progress-dialog > small {
   display:block;
@@ -94,5 +114,14 @@ onMounted(() => {
   to {
     width:100%;
   }
+}
+.fallo {
+  color:#b3261e !important;
+  font-size:11px !important;
+  text-align:center !important;
+}
+.volver {
+  display:inline-block;
+  margin-top:18px;
 }
 </style>

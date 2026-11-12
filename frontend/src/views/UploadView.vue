@@ -1,13 +1,19 @@
 <script setup>
-import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { estado } from '../store'
 
-// Lista temporal de archivos elegidos para esta demostración de carga.
-const files = ref([])
+const router = useRouter()
 
-// Añade los archivos elegidos y muestra nombre/tamaño; todavía no los sube a un servidor.
+// Añade las imágenes elegidas (sin repetir) y guarda los archivos para enviarlos a la API.
 const pick = (event) => {
-  files.value = [...files.value, ...event.target.files]
+  const nuevas = [...event.target.files].filter(
+    (f) => f.type.startsWith('image/') && !estado.archivos.some((a) => a.name === f.name && a.size === f.size),
+  )
+  estado.archivos = [...estado.archivos, ...nuevas].slice(0, 10)
+  event.target.value = ''
 }
+const quitar = (i) => estado.archivos.splice(i, 1)
+const iniciar = () => router.push('/analizando')
 </script>
 
 <template>
@@ -32,15 +38,16 @@ const pick = (event) => {
         </label>
 
         <!-- Solo aparece después de seleccionar al menos un archivo. -->
-        <div v-if="files.length" class="file-list">
-          <p v-for="file in files" :key="file.name">
-            {{ file.name }} <span>{{ (file.size / 1024).toFixed(0) }} KB</span>
+        <div v-if="estado.archivos.length" class="file-list">
+          <p v-for="(file, i) in estado.archivos" :key="file.name + file.size">
+            {{ file.name }}
+            <span>{{ (file.size / 1024).toFixed(0) }} KB　<a class="quitar" href="#" @click.prevent="quitar(i)">Quitar</a></span>
           </p>
         </div>
 
         <div class="upload-actions">
           <span>▧　Formato JPG o PNG</span>
-          <RouterLink class="button" to="/analizando">Iniciar análisis →</RouterLink>
+          <button class="button" :disabled="!estado.archivos.length" @click="iniciar">Iniciar análisis →</button>
         </div>
       </div>
 
@@ -206,5 +213,13 @@ const pick = (event) => {
   .tips h2 {
     grid-column:auto;
   }
+}
+.quitar {
+  color:var(--brand);
+  text-decoration:none;
+}
+.button:disabled {
+  opacity:.45;
+  cursor:not-allowed;
 }
 </style>
