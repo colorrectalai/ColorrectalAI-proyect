@@ -1,0 +1,260 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Reglas globales reutilizables; cada .vue usa <style scoped> para aislar sus estilos propios. */
+/* Colores y valores base que se reutilizan en las pantallas del proyecto. */
+:root {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  color: #18324b;
+  background: #f4f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --navy: #123252;
+  --navy-deep: #071e36;
+  --brand: #087fa8;
+  --brand-bright: #00abf5;
+  --brand-soft: #e7f7fc;
+  --ink: #18324b;
+  --muted: #62778b;
+  --quiet: #8293a3;
+  --line: #dce6ee;
+  --surface: #fff;
+  --canvas: #f4f7fb;
+  --teal: #168879;
+  --teal-soft: #e9f6f2;
+  --amber: #a76b23;
+  --amber-soft: #fff5e8;
+  --shadow: 0 8px 28px rgba(21, 49, 75, .055);
+}
+
+/* Normalización y comportamiento básico para elementos comunes del navegador. */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 360px;
+  background: var(--canvas);
+}
+button, input, select {
+  font: inherit;
+}
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+:focus-visible {
+  outline: 3px solid #5ac3d6;
+  outline-offset: 2px;
+}
+
+/* Estructura y textos compartidos por las vistas internas. */
+.page {
+  width: 100%;
+  max-width: 1440px;
+  min-height: calc(100svh - 72px);
+  margin: 0 auto;
+  padding: 34px clamp(28px, 5vw, 72px) 32px;
+}
+.eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  color: #087fb0;
+  margin: 0 0 8px;
+}
+.page-head {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.page-head h1, .page > h1 {
+  font-size: clamp(25px, 2.2vw, 30px);
+  line-height: 1.2;
+  color: var(--navy-deep);
+  margin: 0 0 7px;
+  font-weight: 700;
+  letter-spacing: -.6px;
+}
+.subhead {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 0;
+}
+.button {
+  min-height: 42px;
+  padding: 0 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--brand);
+  border-radius: 6px;
+  background: var(--brand-bright);
+  color: #062948;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.button:hover {
+  background: #27bafa;
+  border-color: #27bafa;
+  box-shadow: 0 4px 12px #12476622;
+  transform: translateY(-1px);
+}
+.button.secondary {
+  color: #086e9f;
+  border-color: #9dcce0;
+  background: #fff;
+}
+.button.secondary:hover {
+  background: #f1f8fa;
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 2px 9px #18324b08;
+}
+
+/* Tarjetas de resumen usadas en inicio, historial y resultados. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 14px;
+  margin: 22px 0;
+}
+.stats article {
+  min-height: 88px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-content: center;
+  column-gap: 12px;
+  padding: 13px 17px;
+  box-shadow: 0 2px 7px #1b3f5c08;
+}
+.stats article>span {
+  grid-row: span 2;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  font-size: 15px;
+}
+.stats article small, .stats article b {
+  display: block;
+}
+.stats article small {
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+.stats article b {
+  font-size: 16px;
+  color: var(--navy);
+}
+.stats article>i {
+  grid-column: 2;
+  color: var(--quiet);
+  font-size: 9px;
+  font-style: normal;
+  margin-top: 4px;
+}
+
+/* Elementos reutilizados en tablas, etiquetas de estado y avisos académicos. */
+.status {
+  display: inline-flex;
+  padding: 4px 8px;
+  background: var(--teal-soft);
+  color: var(--teal);
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+}
+.row-link {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 10px;
+}
+.row-link:hover {
+  text-decoration: underline;
+}
+.disclaimer {
+  margin: 16px 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+/* Representación visual de una imagen endoscópica de ejemplo y su región marcada. */
+.scope-large {
+  height: clamp(250px, 34vw, 340px);
+  margin-top: 14px;
+  position: relative;
+  border-radius: 7px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 48%,#edaa85 0,#bd6655 19%,#773f43 44%,#1c314b 79%);
+}
+.scope-large>i {
+  position: absolute;
+  width: 25%;
+  height: 26%;
+  left: 38%;
+  top: 37%;
+  border: 2px solid #00c3e8;
+  border-radius: 45%;
+  box-shadow: 0 0 0 4px #00abf522;
+}
+.scope-large>span {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  color: #fff;
+  font-size: 10px;
+}
+
+/* Ajustes generales para pantallas medianas y móviles. */
+@media(max-width:850px) {
+  .page {
+    padding: 28px 24px;
+  }
+  .stats {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:620px) {
+  .page {
+    min-height: calc(100svh - 64px);
+    padding: 23px 15px 26px;
+  }
+  .page-head {
+    align-items: flex-start;
+    gap: 12px;
+    flex-direction: column;
+    margin-bottom: 17px;
+  }
+  .page-head h1, .page>h1 {
+    font-size: 24px;
+  }
+  .stats {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    margin: 16px 0;
+  }
+  .stats article {
+    min-height: 77px;
+  }
+}

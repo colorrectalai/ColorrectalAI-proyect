@@ -1,0 +1,85 @@
+{
+  "fecha": "2026-11-10T08:22:30",
+  "modelo_base": "yolo26n.pt",
+  "epocas": 10,
+  "tamano_img": 640,
+  "semilla": 42,
+  "umbral_confianza": 0.25,
+  "division_por_centro": {
+    "train": [
+      "C1",
+      "C2",
+      "C3",
+      "C4"
+    ],
+    "val": [
+      "C5"
+    ],
+    "test": [
+      "C6"
+    ]
+  },
+  "negativas_incluidas": true,
+  "versiones": {
+    "python": "3.13.16",
+    "torch": "2.14.1+cu130",
+    "ultralytics": "8.4.208",
+    "onnxruntime": "1.31.1"
+  },
+  "metricas_deteccion": {
+    "precision": 0.8261010662302701,
+    "recall": 0.6263982102908278,
+    "mAP50": 0.7277017208960119,
+    "mAP50_95": 0.5420370837824263,
+    "velocidad_ms_por_imagen": {
+      "preprocess": 0.9,
+      "inference": 2.8,
+      "loss": 0.0,
+      "postprocess": 1.6
+    }
+  },
+  "metricas_por_imagen": {
+    "imagenes": 520,
+    "con_polipo": 407,
+    "umbral": 0.25,
+    "VP": 341,
+    "FP": 24,
+    "VN": 89,
+    "FN": 66,
+    "sensibilidad": 0.8378,
+    "especificidad": 0.7876,
+    "precision": 0.9342,
+    "F1": 0.8834,
+    "brier": 0.1829,
+    "ECE": 0.2563,
+    "ROC_AUC": 0.9009,
+    "PR_AUC": 0.9708
+  },
+  "onnx": {
+    "archivo": "best.onnx",
+    "sha256": "b4c98b3538b28f2f22e7fbe6eaabff05662ad70cc9556de45bf881127a2410f3",
+    "entrada": {
+      "images": [
+        1,
+        3,
+        640,
+        640
+      ]
+    },
+    "salida": {
+      "output0": [
+        1,
+        5,
+        8400
+      ]
+    },
+    "verificacion_backend": {
+      "imagenes_comparadas": 40,
+      "formato_salida": "B (clásico, con NMS en el backend)",
+      "misma_cantidad_de_cajas": "38/40",
+      "iou_medio_pt_vs_onnx": 0.9865,
+      "diferencia_media_confianza": 0.0118
+    }
+  },
+  "aviso": "Resultados experimentales con fines academicos. No constituyen diagnostico medico."
+}
