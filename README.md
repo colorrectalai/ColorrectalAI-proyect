@@ -40,7 +40,7 @@ El proyecto se desarrolla siguiendo buenas prácticas de dirección de proyectos
 
 ## Arquitectura
 
-Arquitectura **cliente-servidor en capas** (modelo – API – interfaz), integrada al ecosistema ONCO-AI_USC 2026 B:
+Arquitectura **cliente-servidor ** (modelo – API – interfaz):
 
 ```mermaid
 flowchart LR
