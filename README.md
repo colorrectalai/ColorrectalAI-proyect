@@ -40,30 +40,47 @@ El proyecto se desarrolla siguiendo buenas prácticas de dirección de proyectos
 
 ## Arquitectura
 
-Arquitectura **cliente-servidor en capas** (modelo – API – interfaz), integrada al ecosistema ONCO-AI_USC 2026 B:
+ColorrectalAI usa una arquitectura **cliente-servidor en capas**. El **cliente** es una aplicación web en Vue 3 (`frontend/`). El **servidor** es una API REST en Python con FastAPI (`backend/api/`), que ejecuta el **modelo de IA** YOLO26n en formato ONNX (`backend/ia/`) y guarda en la **base de datos PostgreSQL** (`database/`) el registro de cada solicitud y los resultados. El proyecto se integra al ecosistema ONCO-AI_USC 2026 B.
+
+### Componentes y flujo de datos
+
+1. **Cliente (Frontend, `frontend/`)**: aplicación web con Vue 3, Vite y Vue Router. El usuario sube una imagen JPG o PNG y la envía al servidor con `POST /api/v1/inferencias`.
+2. **Servidor (API REST en Python, `backend/api/`)**: construido con FastAPI, Uvicorn y Pydantic. Valida la imagen, controla la admisión de solicitudes, maneja los errores y coordina la inferencia.
+3. **Modelo de IA (`backend/ia/`)**: pipeline en Python de preprocesamiento, YOLO26n exportado a ONNX (ejecutado con ONNX Runtime en CPU), posprocesamiento y explicabilidad. Devuelve ROI, clase y confianza.
+4. **Base de datos PostgreSQL (`database/`)**: destino final de los datos del sistema. La API la usa mediante SQLAlchemy y psycopg para registrar cada solicitud de inferencia (formato, tamaño, latencia, número de ROI, modelo o error) y los resultados por ROI. El esquema (`database/schema.sql`) también contempla experimentos, versiones del modelo y métricas de evaluación.
+5. **Entrenamiento (`entrenamiento/`)**: cuaderno de Ultralytics en Google Colab con el dataset PolypGen. Exporta `best.onnx`, que se publica en GitHub Releases con su SHA-256. La capa de IA lo descarga y verifica su integridad antes de usarlo.
+6. **Despliegue**: la API se despliega con Docker en Render (`render.yaml`) y el frontend en GitHub Pages. La integración continua corre las pruebas con pytest en GitHub Actions (`.github/workflows/`).
+
+### Diagrama
 
 ```mermaid
 flowchart LR
-  U[Usuario] --> F["Frontend<br/>Vue 3 + Vite<br/>(frontend/)"]
-  F -- "POST /api/v1/inferencias<br/>imagen JPG/PNG" --> A["API REST<br/>FastAPI + Uvicorn<br/>(backend/api)"]
-  A --> IA["Capa de IA<br/>preprocesamiento → YOLO26n ONNX<br/>→ posprocesamiento → explicabilidad<br/>(backend/ia)"]
-  A -. "registro anónimo opcional" .-> D[("PostgreSQL<br/>(database/)")]
-  R[("GitHub Releases<br/>best.onnx + SHA-256")] -. "descarga y verificación" .-> IA
-  C["Google Colab<br/>entrenamiento YOLO<br/>(entrenamiento/)"] -. "exporta" .-> R
+  U[Usuario] --> F["Cliente: Frontend<br/>Vue 3 + Vite<br/>(frontend/)"]
+  F -- "POST /api/v1/inferencias<br/>imagen JPG/PNG" --> A["Servidor: API REST Python<br/>FastAPI + Uvicorn + Pydantic<br/>(backend/api)"]
+  A --> IA["Modelo de IA<br/>preprocesamiento → YOLO26n ONNX<br/>→ posprocesamiento → explicabilidad<br/>(backend/ia)"]
+  IA -- "ROI + clase + confianza" --> A
   A -- "ROI + clase + confianza + latencias" --> F
+  A -- "SQLAlchemy + psycopg<br/>solicitudes y resultados" --> D[("Base de datos<br/>PostgreSQL<br/>(database/)")]
+  R[("GitHub Releases<br/>best.onnx + SHA-256")] -- "descarga y verificación" --> IA
+  C["Entrenamiento<br/>Ultralytics en Google Colab<br/>(entrenamiento/)"] -- "exporta modelo" --> R
+  C -. "experimentos y métricas<br/>(según esquema)" .-> D
 ```
+
+### Capas y tecnologías
 
 | Capa | Tecnología | Carpeta |
 |---|---|---|
-| Presentación | Vue 3, Vite, Vue Router | `frontend/` |
-| Servicio (API REST) | FastAPI, Uvicorn, Pydantic | `backend/api/` |
-| Inteligencia artificial | YOLO26n exportado a ONNX, ONNX Runtime (CPU) | `backend/ia/` |
-| Datos (opcional) | PostgreSQL, SQLAlchemy, psycopg | `database/` |
+| Cliente / Presentación | Vue 3, Vite, Vue Router | `frontend/` |
+| Servidor / API REST (Python) | FastAPI, Uvicorn, Pydantic | `backend/api/` |
+| Modelo de inteligencia artificial (Python) | YOLO26n exportado a ONNX, ONNX Runtime (CPU) | `backend/ia/` |
+| Base de datos | PostgreSQL, SQLAlchemy, psycopg | `database/` |
 | Entrenamiento | Ultralytics en Google Colab, dataset PolypGen | `entrenamiento/` |
 | Despliegue | Docker en Render (API), GitHub Pages (frontend) | `render.yaml` |
 | Integración continua | GitHub Actions (pytest) | `.github/workflows/` |
 
-**Privacidad:** la API procesa cada imagen en memoria y **no la almacena**. La base de datos, si se configura, solo guarda metadatos anónimos de cada solicitud (formato, tamaño, latencia, número de ROI, modelo o error).
+**Privacidad:** la API procesa cada imagen en memoria y **no la almacena**. La base de datos PostgreSQL, si se configura con `DATABASE_URL`, solo guarda metadatos anónimos de cada solicitud (formato, tamaño, latencia, número de ROI, modelo o error).
+
+`backend/`, `frontend/` y `database/` tienen su propio `README.md`. El de `entrenamiento/` está pendiente (DEF-12 del informe de QA).
 
 ## Estado de la versión
 
@@ -82,21 +99,19 @@ flowchart LR
 
 ```text
 ColorrectalAI-proyect/
-├── frontend/              # Interfaz web (Vue 3 + Vite)
-├── backend/               # API de inferencia
-│   ├── api/               #   rutas, validación, admisión, errores, registro en BD
-│   ├── ia/                #   preprocesamiento, adaptador YOLO (ONNX), posprocesamiento, explicabilidad
+├── frontend/              # Cliente: interfaz web (Vue 3 + Vite)
+├── backend/               # Servidor: API de inferencia (Python)
+│   ├── api/               #   FastAPI: rutas, validación, admisión, errores, registro en BD
+│   ├── ia/                #   modelo de IA: preprocesamiento, adaptador YOLO (ONNX), posprocesamiento, explicabilidad
 │   ├── tests/             #   pruebas con pytest (modelo falso, no requiere el .onnx)
 │   └── modelos/           #   aquí va best.onnx (no se versiona; se publica en Releases)
-├── database/              # Esquema PostgreSQL y guía de instalación
+├── database/              # Base de datos PostgreSQL: schema.sql y guía de instalación
 ├── entrenamiento/         # Cuaderno de Colab y registro del experimento
 ├── pruebas/               # Informe de QA, Excel TSP y pre-prueba de usabilidad
 ├── .github/workflows/     # CI: pruebas del backend en cada push y pull request
 ├── render.yaml            # Despliegue de la API en Render
 └── README.md
 ```
-
-`backend/`, `frontend/` y `database/` tienen su propio `README.md`. El de `entrenamiento/` está pendiente (DEF-12 del informe de QA).
 
 ## Instalación y ejecución
 
@@ -131,9 +146,15 @@ npm run dev
 
 Abre <http://localhost:5173>. En producción, define `VITE_API_URL` con la URL de la API desplegada.
 
-### Base de datos (opcional)
+### Base de datos (PostgreSQL, opcional)
 
-Ver [`database/README.md`](database/). Si no se define `DATABASE_URL`, la API funciona igual sin base de datos.
+Crea la base y ejecuta el esquema:
+
+```sh
+psql "postgresql://usuario:clave@localhost:5432/colorrectalai" -f database/schema.sql
+```
+
+Luego define `DATABASE_URL` en `backend/.env`. Más detalles en [`database/README.md`](database/). Si no se define `DATABASE_URL`, la API funciona igual sin base de datos.
 
 ## Modelo de IA
 
