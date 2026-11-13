@@ -32,6 +32,9 @@ function submit() {
     return
   }
 
+  // Conserva el nombre del perfil de demostración para personalizar el dashboard.
+  localStorage.setItem('colorrectalai-user-name', name.value.trim())
+  localStorage.setItem('colorrectalai-session', 'active')
   router.push('/inicio')
 }
 </script>

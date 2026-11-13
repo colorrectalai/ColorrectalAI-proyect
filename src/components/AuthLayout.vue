@@ -1,4 +1,6 @@
 <script setup>
+import BrandLogo from './BrandLogo.vue'
+
 defineProps({
   headline: { type: String, required: true },
   introduction: { type: String, required: true },
@@ -8,8 +10,8 @@ defineProps({
 <template>
   <main class="auth-page">
     <section class="auth-copy">
-      <img class="auth-logo" src="../../public/img/Logotipo.png" alt="ColorrectalAI" />
-      <h3 class="ColorrectalAI">Colorrectal<span>AI</span></h3>
+      <!-- Marca compartida: isotipo PNG más el nombre en texto. -->
+      <div class="auth-logo"><BrandLogo /></div>
 
       <div class="auth-message">
         <p class="auth-kicker">COLORRECTALAI · PLATAFORMA ACADÉMICA</p>
@@ -65,24 +67,21 @@ defineProps({
 }
 
 .auth-logo {
-  width: 80px;
   position: absolute;
   top: clamp(28px, 60px, 100px);
   left: clamp(36px, 70px, 88px);
+  display: flex;
+  align-items: center;
   text-decoration: none;
 }
 
-.ColorrectalAI {
-  position: absolute;
-  top: clamp(28px, 55px, 150px);
-  left: clamp(36px, 150px, 250px);
-  color: #fff;
-  font-size: 25px;
-  font-weight: 700;
+.auth-logo :deep(.brand-emblem) {
+  width: 70px;
+  height: 70px;
 }
 
-.ColorrectalAI span {
-  color: #00abf5;
+.auth-logo :deep(.brand-name) {
+  font-size: 25px;
 }
 
 .auth-message {
@@ -308,6 +307,15 @@ defineProps({
   .auth-logo {
     top: 24px;
     left: 24px;
+  }
+
+  .auth-logo :deep(.brand-emblem) {
+    width: 48px;
+    height: 48px;
+  }
+
+  .auth-logo :deep(.brand-name) {
+    font-size: 21px;
   }
 
   .auth-message {

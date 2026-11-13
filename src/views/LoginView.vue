@@ -19,6 +19,8 @@ function submit() {
     return
   }
 
+  // Marca la sesión de demostración para conservar la navegación interna en HomeView.
+  localStorage.setItem('colorrectalai-session', 'active')
   router.push('/inicio')
 }
 </script>
