@@ -38,3 +38,4 @@ class EstadoSalud(BaseModel):
     modelo_listo: bool
     modelo_version: str
     modelo_sha256: str
+    base_datos: Literal["no_configurada", "conectada", "sin_conexion"] = "no_configurada"
