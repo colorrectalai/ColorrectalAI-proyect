@@ -2,16 +2,16 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BrandLogo from './BrandLogo.vue'
-import { LogOut } from '@lucide/vue'
+import { ChevronDown, ChevronUp, LogOut } from '@lucide/vue'
 
 const route = useRoute()
 const router = useRouter()
-// La barra interna se mantiene entre HomeView y las vistas del espacio de trabajo.
-const loggedInView = computed(() => (
-  ['/inicio', '/historial', '/carga', '/analizando', '/resultados', '/comparacion']
-    .some(path => route.path.startsWith(path))
-  || localStorage.getItem('colorrectalai-session') === 'active'
-))
+// Solo muestra la navegación privada cuando hay una sesión activa.
+// La ruta es una dependencia reactiva para actualizarla al entrar o cerrar sesión.
+const loggedInView = computed(() => {
+  route.path
+  return localStorage.getItem('colorrectalai-session') === 'active'
+})
 // Nombre guardado durante el registro; la ruta reactiva actualiza el dato al iniciar sesión.
 const accountName = computed(() => {
   route.path
@@ -78,7 +78,8 @@ onUnmounted(() => {
       >
         <span class="avatar">{{ accountInitials }}</span>
         <span>{{ accountName }}</span>
-        <span class="chevron">⌄</span>
+        <ChevronUp v-if="profileMenuOpen" class="account-chevron" :size="16" :stroke-width="2" aria-hidden="true" />
+        <ChevronDown v-else class="account-chevron" :size="16" :stroke-width="2" aria-hidden="true" />
       </button>
       <Transition name="profile-menu">
         <div v-if="profileMenuOpen" id="profile-dropdown" class="profile-dropdown">
@@ -95,6 +96,7 @@ onUnmounted(() => {
     </div>
   </header>
 </template>
+
 <style scoped>
 /* Fondo, altura y alineación del encabezado compartido. */
 .topbar {
@@ -240,8 +242,7 @@ onUnmounted(() => {
   font-size:11px;
   font-weight:700;
 }
-.chevron {
-  font-size:15px;
+.account-chevron {
   color:#a9bdcc;
 }
 /* Ajustes para que los enlaces sigan cabiendo en tablet y móvil. */
