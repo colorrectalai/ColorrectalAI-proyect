@@ -1,7 +1,15 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Activity, ArrowRight, FileImage, ScanSearch, Info } from '@lucide/vue'
-import HistoryTable from '../components/HistoryTable.vue'
+import InterpretationHistoryTable from '../components/InterpretationHistoryTable.vue'
+import { descargarResumen, listarInterpretaciones, restaurarInterpretacion } from '../history'
+
+const router = useRouter()
+const historyEntries = ref([])
+const recent = computed(() => historyEntries.value.slice(0, 5))
+const recentLoading = ref(true)
+const historyError = ref('')
 
 // Nombre de muestra para el prototipo; si hay un nombre guardado, se usa en el saludo.
 const firstName = computed(() => {
@@ -9,22 +17,44 @@ const firstName = computed(() => {
   return savedName?.trim().split(/\s+/)[0] || 'Juan'
 })
 
-// Interpretaciones de ejemplo que ilustran cómo se verá la actividad reciente.
-const recent = [
-  { date: '18 oct 2025', time: '10:42 a. m.', id: 'A-DEMO-003', case: 'Colonoscopia · Caso de práctica', count: 3, confidence: '94.2%', label: 'Alta', status: 'Completado', note: '18 oct 2025, 10:43' },
-  { date: '17 oct 2025', time: '3:16 p. m.', id: 'A-DEMO-002', case: 'Colonoscopia · Caso de práctica', count: 2, confidence: '91.8%', label: 'Alta', status: 'Completado', note: '17 oct 2025, 3:17' },
-]
+// Los contadores se calculan con todas las interpretaciones guardadas localmente.
+const summary = computed(() => {
+  const imagenes = historyEntries.value.reduce((total, item) => total + item.resultados.length, 0)
+  const regiones = historyEntries.value.reduce(
+    (total, item) => total + item.resultados.reduce((suma, resultado) => suma + (resultado.respuesta.rois?.length || 0), 0),
+    0,
+  )
 
-// Indicadores de demostración con iconos del mismo lenguaje visual de HomeView.
-const summary = [
-  { label: 'Interpretaciones guardadas', value: '24', detail: 'En tu cuaderno académico', icon: Activity },
-  { label: 'Imágenes analizadas', value: '37', detail: 'Entre todos los análisis', icon: FileImage },
-  { label: 'Regiones de interés', value: '8', detail: 'Marcadas para revisión', icon: ScanSearch },
-]
+  return [
+    { label: 'Interpretaciones guardadas', value: historyEntries.value.length, detail: 'En tu cuaderno académico', icon: Activity },
+    { label: 'Imágenes analizadas', value: imagenes, detail: 'En tus interpretaciones', icon: FileImage },
+    { label: 'Regiones de interés', value: regiones, detail: 'Señaladas por el modelo', icon: ScanSearch },
+  ]
+})
 
 // Muestra cada bloque al entrar en pantalla y elimina el observador al salir de la vista.
 const dashboardRoot = ref(null)
 let revealObserver
+
+// El bloque de actividad muestra solo las cinco interpretaciones más recientes.
+onMounted(async () => {
+  try {
+    historyEntries.value = await listarInterpretaciones()
+  } catch (error) {
+    historyError.value = error.message || 'No se pudo cargar el historial local.'
+  } finally {
+    recentLoading.value = false
+  }
+})
+
+const openInterpretation = async (item) => {
+  try {
+    await restaurarInterpretacion(item.id)
+    await router.push({ name: 'results', params: { id: item.id } })
+  } catch (error) {
+    historyError.value = error.message || 'No se pudo abrir esta interpretación.'
+  }
+}
 
 onMounted(() => {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
@@ -88,9 +118,18 @@ onUnmounted(() => revealObserver?.disconnect())
         <RouterLink to="/historial" class="row-link">Ver historial completo <ArrowRight :size="16" aria-hidden="true" /></RouterLink>
       </div>
 
-      <!-- Tabla reutilizada para mantener el mismo formato que el historial. -->
+      <!-- Tabla del historial con las cinco interpretaciones más recientes. -->
       <div class="panel activity-panel">
-        <HistoryTable :items="recent" />
+        <p v-if="historyError" class="activity-error" role="alert">{{ historyError }}</p>
+        <InterpretationHistoryTable
+          :items="recent"
+          :loading="recentLoading"
+          :empty-title="historyError ? 'No se pudo cargar el historial' : 'Aún no hay interpretaciones guardadas'"
+          :empty-description="historyError ? 'Comprueba el almacenamiento local e inténtalo de nuevo.' : 'Tus análisis completados aparecerán aquí.'"
+          empty-to="/carga"
+          @open="openInterpretation"
+          @download="descargarResumen"
+        />
       </div>
     </section>
 
@@ -100,6 +139,27 @@ onUnmounted(() => revealObserver?.disconnect())
 </template>
 
 <style scoped>
+/* Fondo general de la vista, independiente de la tarjeta de bienvenida. */
+.dashboard {
+  position: relative;
+  isolation: isolate;
+}
+
+.dashboard::before {
+  content: '';
+  position: absolute;
+  inset: -20px calc((100% - 100vw) / 2);
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(243, 248, 253, .84) 0%,
+      rgba(243, 248, 253, .2) 100%
+    ),
+    url('/img/Fondo4.png') center / cover no-repeat;
+  filter: blur(2px);
+}
 /* Panel de bienvenida: contraste navy y acento azul de la identidad del proyecto. */
 .dashboard-welcome {
   position: relative;
@@ -279,24 +339,26 @@ onUnmounted(() => revealObserver?.disconnect())
   box-shadow: 0 4px 16px rgba(15, 51, 78, .045);
 }
 
-/* Aumenta la legibilidad de la tabla solo en este panel. */
-.activity-panel :deep(.records th) {
+.activity-error {
+  margin: 12px 16px 0;
+  color: #8d3b2e;
+  font-size: 13px;
+}
+
+/* La actividad conserva la tabla del historial con un tamaño legible. */
+.activity-panel :deep(.history-table th) {
   padding: 14px 15px;
   color: #526b80;
   font-size: 11px;
 }
 
-.activity-panel :deep(.records td) {
+.activity-panel :deep(.history-table td) {
   padding: 14px 15px;
   font-size: 12px;
 }
 
-.activity-panel :deep(.records td small) {
+.activity-panel :deep(.history-table td small) {
   font-size: 11px;
-}
-
-.activity-panel :deep(.row-link) {
-  font-size: 12px;
 }
 
 /* Nota de alcance en formato compacto, con icono alineado al texto. */

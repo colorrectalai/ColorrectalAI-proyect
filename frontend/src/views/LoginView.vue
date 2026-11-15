@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../components/AuthLayout.vue'
+import { activarPerfilLocal } from '../userProfile'
 
 const router = useRouter()
 // Valores controlados por v-model en los campos del formulario.
@@ -19,7 +20,8 @@ function submit() {
     return
   }
 
-  // Marca la sesión de demostración para conservar la navegación interna en HomeView.
+  // Activa el nombre asociado al correo en este prototipo local.
+  activarPerfilLocal(email.value)
   localStorage.setItem('colorrectalai-session', 'active')
   router.push('/inicio')
 }

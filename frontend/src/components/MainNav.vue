@@ -1,8 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import BrandLogo from './BrandLogo.vue'
-import { ChevronDown, ChevronUp, LogOut } from '@lucide/vue'
+import { ChevronDown, ChevronUp, CircleHelp, History, House, LogIn, LogOut, PanelsTopLeft, ScanSearch, UserRoundPlus } from '@lucide/vue'
+import { limpiarPerfilActivo } from '../userProfile'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,9 +15,16 @@ const loggedInView = computed(() => {
 // Nombre guardado durante el registro; la ruta reactiva actualiza el dato al iniciar sesión.
 const accountName = computed(() => {
   route.path
-  return localStorage.getItem('colorrectalai-user-name')?.trim() || 'Juan S.'
+  return localStorage.getItem('colorrectalai-user-name')?.trim() || 'Usuario'
 })
-const accountInitials = computed(() => accountName.value.split(/\s+/).slice(0, 2).map(part => part[0]?.toUpperCase()).join(''))
+const accountLabel = computed(() => {
+  const [firstName, surname] = accountName.value.split(/\s+/).filter(Boolean)
+  return surname ? `${firstName} ${[...surname][0].toLocaleUpperCase('es-CO')}.` : firstName
+})
+const accountInitials = computed(() => {
+  const [firstName, surname] = accountName.value.split(/\s+/).filter(Boolean)
+  return `${firstName?.[0] || ''}${surname ? [...surname][0] : ''}`.toLocaleUpperCase('es-CO')
+})
 const profileMenuOpen = ref(false)
 const profileMenu = ref(null)
 
@@ -27,8 +34,7 @@ function closeProfileMenuOnOutsideClick(event) {
 
 function logout() {
   profileMenuOpen.value = false
-  localStorage.removeItem('colorrectalai-user-name')
-  localStorage.removeItem('colorrectalai-session')
+  limpiarPerfilActivo()
   router.push('/')
 }
 
@@ -51,20 +57,23 @@ onUnmounted(() => {
 <template>
   <!-- Encabezado general; el logo vuelve al inicio apropiado para cada área. -->
   <header class="topbar" :class="{ 'is-scrolled': isScrolled }">
-    <RouterLink class="brand" to="/"><BrandLogo compact /></RouterLink>
+    <RouterLink class="brand" to="/" aria-label="ColorrectalAI, ir al inicio">
+      <img src="/img/LogoColorrectalAI2.png" alt="ColorrectalAI" />
+    </RouterLink>
     <!-- Navegación para las vistas internas de la aplicación. -->
     <nav v-if="loggedInView" aria-label="Navegación principal">
-      <RouterLink to="/" :class="{ active: route.path === '/' }">Inicio</RouterLink>
-      <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }">Espacio de trabajo</RouterLink>
+      <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }"><House :size="17" aria-hidden="true" /><span>Inicio</span></RouterLink>
       <RouterLink
         to="/carga"
         :class="{ active: ['/carga', '/analizando', '/resultados', '/comparacion'].some(path => route.path.startsWith(path)) }"
-      >Interpretación</RouterLink>
-      <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }">Historial</RouterLink>
+      ><ScanSearch :size="17" aria-hidden="true" /><span>Interpretación</span></RouterLink>
+      <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }"><History :size="17" aria-hidden="true" /><span>Historial</span></RouterLink>
     </nav>
     <!-- Enlaces públicos para conocer el proyecto, acceder o crear una cuenta. -->
     <nav v-else aria-label="Navegación principal">
-      <RouterLink to="/#acerca">Acerca de</RouterLink><RouterLink to="/acceso">Iniciar sesión</RouterLink><RouterLink class="button" to="/registro">Crear cuenta</RouterLink>
+      <RouterLink to="/#acerca"><CircleHelp :size="17" aria-hidden="true" /><span>Acerca de</span></RouterLink>
+      <RouterLink to="/acceso"><LogIn :size="17" aria-hidden="true" /><span>Iniciar sesión</span></RouterLink>
+      <RouterLink class="button" to="/registro"><UserRoundPlus :size="17" aria-hidden="true" /><span>Crear cuenta</span></RouterLink>
     </nav>
     <!-- Perfil desplegable con opción para cerrar la sesión de demostración. -->
     <div v-if="loggedInView" ref="profileMenu" class="profile-menu" @keydown.esc.stop="profileMenuOpen = false">
@@ -77,7 +86,7 @@ onUnmounted(() => {
         @click="profileMenuOpen = !profileMenuOpen"
       >
         <span class="avatar">{{ accountInitials }}</span>
-        <span>{{ accountName }}</span>
+        <span class="account-name">{{ accountLabel }}</span>
         <ChevronUp v-if="profileMenuOpen" class="account-chevron" :size="16" :stroke-width="2" aria-hidden="true" />
         <ChevronDown v-else class="account-chevron" :size="16" :stroke-width="2" aria-hidden="true" />
       </button>
@@ -105,7 +114,7 @@ onUnmounted(() => {
   z-index: 1000;
   width: 100%;
   box-sizing: border-box;
-  height:72px;
+  height:80px;
   transition: background-color .2s ease, box-shadow .2s ease;
   background:var(--navy);
   display:flex;
@@ -126,6 +135,14 @@ onUnmounted(() => {
   text-decoration:none;
   white-space:nowrap;
 }
+.brand img {
+  display:block;
+  width:auto;
+  width:auto;
+  height:80px;
+  object-fit:contain;
+  object-position:left center;
+}
 .topbar nav {
   margin-left:auto;
   display:flex;
@@ -133,12 +150,20 @@ onUnmounted(() => {
   gap:8px;
 }
 .topbar nav a {
-  color:#cfdeeb;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  color:var(--canvas);
   font-size:14px;
   text-decoration:none;
   padding:10px 12px;
   border-radius:15px;
   transition:background .15s ease,color .15s ease;
+  white-space:nowrap;
+}
+.topbar nav a svg {
+  flex:0 0 auto;
+  color:var(--canvas);
 }
 .topbar nav a:not(.button):hover,
 .topbar nav a.active:not(.button) {
@@ -160,6 +185,9 @@ onUnmounted(() => {
   font-size:12px;
   cursor:pointer;
   transition:background-color .16s ease;
+}
+.account-name {
+  white-space:nowrap;
 }
 .account:hover,
 .account[aria-expanded='true'] {
@@ -258,6 +286,9 @@ onUnmounted(() => {
     padding:8px;
     font-size:12px;
   }
+  .brand img {
+    height:60px;
+  }
 }
 @media(max-width:620px) {
   .topbar {
@@ -272,6 +303,10 @@ onUnmounted(() => {
     grid-column:1;
     grid-row:1;
   }
+  .brand img {
+    height:56px;
+    max-width:220px;
+  }
   .profile-menu {
     grid-column:2;
     grid-row:1;
@@ -280,13 +315,22 @@ onUnmounted(() => {
     grid-column:1 / -1;
     grid-row:2;
     justify-content:space-between;
+    overflow-x:auto;
     width:100%;
     margin:0;
+    scrollbar-width:none;
+  }
+  .topbar nav::-webkit-scrollbar {
+    display:none;
   }
   .topbar nav a {
-    padding:8px 4px;
+    gap:5px;
+    padding:8px 5px;
     font-size:10px;
-    white-space:nowrap;
+  }
+  .topbar nav a svg {
+    width:14px;
+    height:14px;
   }
   .account {
     padding:4px;

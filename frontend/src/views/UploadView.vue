@@ -141,6 +141,20 @@ const iniciar = () => router.push('/analizando')
 .upload-page {
   max-width: 1440px;
   margin-inline: auto;
+  position: relative;   /* Necesario para contener el ::before */
+  isolation: isolate;   /* Evita que el z-index: -1 se esconda detrás del body */
+}
+
+.upload-page::before {
+  content: "";
+  position: absolute;
+  inset: -20px calc((100% - 100vw) / 2); /* Extiende la capa hasta ambos bordes del viewport */
+  z-index: -1;
+  pointer-events: none;
+
+  background: url("/img/Fondo4.png") center / cover no-repeat;
+
+  filter: blur(3px);
 }
 
 .upload-heading .eyebrow span {
