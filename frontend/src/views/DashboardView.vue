@@ -4,10 +4,11 @@ import { useRouter } from 'vue-router'
 import { Activity, ArrowRight, FileImage, ScanSearch, Info } from '@lucide/vue'
 import InterpretationHistoryTable from '../components/InterpretationHistoryTable.vue'
 import { descargarResumen, listarInterpretaciones, restaurarInterpretacion } from '../history'
+import { workflowSteps } from '../data/workflowSteps'
 
 const router = useRouter()
 const historyEntries = ref([])
-const recent = computed(() => historyEntries.value.slice(0, 5))
+const recent = computed(() => historyEntries.value.slice(0, 3))
 const recentLoading = ref(true)
 const historyError = ref('')
 
@@ -60,7 +61,7 @@ onMounted(() => {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
 
   const revealTargets = dashboardRoot.value?.querySelectorAll(
-    '.dashboard-welcome, .dashboard-stats .stat-card, .activity-section, .disclaimer',
+    '.dashboard-welcome, .dashboard-stats .stat-card, .workflow-card, .activity-section, .disclaimer',
   ) ?? []
 
   revealObserver = new IntersectionObserver((entries) => {
@@ -95,42 +96,72 @@ onUnmounted(() => revealObserver?.disconnect())
       </div>
     </section>
 
-    <!-- Resumen rápido de las interpretaciones y las imágenes del espacio. -->
-    <section class="stats dashboard-stats" aria-label="Resumen de actividad">
-      <article v-for="item in summary" :key="item.label" class="stat-card">
-        <span class="stat-icon"><component :is="item.icon" :size="21" :stroke-width="1.8" aria-hidden="true" /></span>
-        <div class="stat-content">
-          <small>{{ item.label }}</small>
-          <b>{{ item.value }}</b>
-          <i>{{ item.detail }}</i>
-        </div>
-      </article>
-    </section>
-
-    <!-- Actividad más reciente y enlace al historial completo. -->
-    <section class="activity-section" aria-labelledby="activity-title">
+    <!-- Guía práctica con los mismos pasos que presenta HomeView. -->
+    <section class="workflow-section" aria-labelledby="workflow-title">
       <div class="dashboard-section-head">
         <div>
-          <p class="eyebrow">TU CUADERNO</p>
-          <h2 id="activity-title">Interpretaciones recientes</h2>
-          <p class="section-description">Retoma un análisis o consulta sus detalles.</p>
+          <h2 id="workflow-title">Un recorrido claro, de principio a fin.</h2>
+          <p class="section-description">Prepara tus imágenes, revisa las salidas y conserva el contexto de cada interpretación.</p>
         </div>
-        <RouterLink to="/historial" class="row-link">Ver historial completo <ArrowRight :size="16" aria-hidden="true" /></RouterLink>
+        <RouterLink to="/carga" class="row-link">Iniciar interpretación <ArrowRight :size="16" aria-hidden="true" /></RouterLink>
       </div>
 
-      <!-- Tabla del historial con las cinco interpretaciones más recientes. -->
-      <div class="panel activity-panel">
-        <p v-if="historyError" class="activity-error" role="alert">{{ historyError }}</p>
-        <InterpretationHistoryTable
-          :items="recent"
-          :loading="recentLoading"
-          :empty-title="historyError ? 'No se pudo cargar el historial' : 'Aún no hay interpretaciones guardadas'"
-          :empty-description="historyError ? 'Comprueba el almacenamiento local e inténtalo de nuevo.' : 'Tus análisis completados aparecerán aquí.'"
-          empty-to="/carga"
-          @open="openInterpretation"
-          @download="descargarResumen"
-        />
+      <div class="workflow-grid">
+        <article v-for="step in workflowSteps" :key="step.number" class="workflow-card">
+          <div class="workflow-card-top">
+            <span class="workflow-number">{{ step.number }}</span>
+            <span class="workflow-icon"><component :is="step.icon" :size="20" :stroke-width="1.8" aria-hidden="true" /></span>
+          </div>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.description }}</p>
+        </article>
       </div>
+    </section>
+
+    <hr class="dashboard-divider" aria-hidden="true" />
+
+    <!-- Resumen e historial forman el bloque de información del espacio de trabajo. -->
+    <section class="dashboard-data" aria-label="Resumen e historial">
+
+      <div class="dashboard-section-head">
+          <div>
+            <h2 id="activity-title">Interpretaciones recientes</h2>
+            <p class="section-description">Retoma un análisis o consulta sus detalles.</p>
+          </div>
+          <RouterLink to="/historial" class="row-link">Ver historial completo <ArrowRight :size="16" aria-hidden="true" /></RouterLink>
+        </div>
+        
+      <!-- Resumen rápido de las interpretaciones y las imágenes del espacio. -->
+      <section class="stats dashboard-stats" aria-label="Resumen de actividad">
+        <article v-for="item in summary" :key="item.label" class="stat-card">
+          <div class="stat-value">
+            <span class="stat-icon"><component :is="item.icon" :size="28" :stroke-width="1.8" aria-hidden="true" /></span>
+            <b>{{ item.value }}</b>
+          </div>
+          <div class="stat-content">
+            <small>{{ item.label }}</small>
+            <i>{{ item.detail }}</i>
+          </div>
+        </article>
+      </section>
+
+      <!-- Actividad más reciente y enlace al historial completo. -->
+      <section class="activity-section" aria-labelledby="activity-title">
+
+        <!-- Tabla del historial limitada a las tres interpretaciones más recientes. -->
+        <div class="panel activity-panel">
+          <p v-if="historyError" class="activity-error" role="alert">{{ historyError }}</p>
+          <InterpretationHistoryTable
+            :items="recent"
+            :loading="recentLoading"
+            :empty-title="historyError ? 'No se pudo cargar el historial' : 'Aún no hay interpretaciones guardadas'"
+            :empty-description="historyError ? 'Comprueba el almacenamiento local e inténtalo de nuevo.' : 'Tus análisis completados aparecerán aquí.'"
+            empty-to="/carga"
+            @open="openInterpretation"
+            @download="descargarResumen"
+          />
+        </div>
+      </section>
     </section>
 
     <!-- Aviso visible sobre el alcance académico y experimental del proyecto. -->
@@ -252,48 +283,140 @@ onUnmounted(() => revealObserver?.disconnect())
 /* Métricas con más aire, iconografía consistente y texto legible. */
 .dashboard-stats {
   gap: 18px;
-  margin: 22px 0 40px;
+  margin: 0;
 }
 
 .dashboard-stats .stat-card {
-  min-height: 124px;
-  grid-template-columns: 48px minmax(0, 1fr);
-  align-items: start;
-  column-gap: 15px;
-  padding: 20px;
-  border-radius: 12px;
+  min-height: 98px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
   box-shadow: 0 4px 16px rgba(15, 51, 78, .045);
+}
+
+.stat-value {
+  display: grid;
+  grid-template-columns: 56px auto;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
 }
 
 .stat-icon {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 66px;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 13px;
   background: #e5f5ff;
   color: var(--blue);
 }
 
-.dashboard-stats .stat-content small {
-  margin: 1px 0 5px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.4;
+.dashboard-stats .stat-value b {
+  color: var(--navy);
+  font-size: 29px;
+  line-height: 1;
 }
 
-.dashboard-stats .stat-content b {
-  color: var(--navy);
-  font-size: 27px;
-  line-height: 1.15;
+.dashboard-stats .stat-content {
+  min-width: 0;
+  text-align: left;
+  justify-self: start;
+}
+
+.dashboard-stats .stat-content small {
+  margin: 0 0 4px;
+  color: var(--navy-deep);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .dashboard-stats .stat-content i {
-  grid-column: auto;
-  margin-top: 5px;
+  display: block;
+  margin-top: 3px;
   color: var(--quiet);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.35;
   font-style: normal;
+}
+
+/* Recorrido de uso presentado en tarjetas claras dentro del espacio privado. */
+.workflow-section {
+  margin-bottom: 0;
+}
+
+.dashboard-divider {
+  height: 1px;
+  margin: 34px 0 28px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, #9fc7df 12%, #9fc7df 88%, transparent);
+}
+
+.dashboard-data {
+  display: grid;
+  gap: 30px;
+}
+
+.workflow-section .dashboard-section-head {
+  margin-top: 40px;
+  margin-bottom: 16px;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workflow-card {
+  min-height: 174px;
+  padding: 17px 18px;
+  border: 1px solid #d6e7f3;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 4px 16px rgba(15, 51, 78, .045);
+}
+
+.workflow-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.workflow-number {
+  color: var(--blue);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .6px;
+}
+
+.workflow-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 11px;
+  background: #e5f5ff;
+  color: var(--blue);
+}
+
+.workflow-card h3 {
+  margin: 0 0 7px;
+  color: var(--navy-deep);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.workflow-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 /* Encabezado de actividad y tabla del cuaderno. */
@@ -302,7 +425,6 @@ onUnmounted(() => revealObserver?.disconnect())
   align-items: flex-end;
   justify-content: space-between;
   gap: 18px;
-  margin: 0 0 16px;
 }
 
 .dashboard-section-head .eyebrow {
@@ -443,12 +565,46 @@ onUnmounted(() => revealObserver?.disconnect())
   .dashboard-stats {
     grid-template-columns: 1fr;
     gap: 10px;
-    margin: 16px 0 32px;
+    margin: 0;
   }
 
   .dashboard-stats .stat-card {
-    min-height: 96px;
-    padding: 15px 17px;
+    min-height: 84px;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 12px 14px;
+  }
+
+  .stat-value {
+    grid-template-columns: 50px auto;
+    gap: 8px;
+  }
+
+  .stat-icon {
+    width: 50px;
+    height: 56px;
+  }
+
+  .stat-value :deep(svg) {
+    width: 25px;
+    height: 25px;
+  }
+
+  .workflow-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .workflow-card {
+    min-height: 170px;
+    padding: 14px;
+  }
+
+  .dashboard-divider {
+    margin: 26px 0 22px;
+  }
+
+  .dashboard-data {
+    gap: 24px;
   }
 
   .dashboard-section-head {
@@ -463,6 +619,16 @@ onUnmounted(() => revealObserver?.disconnect())
 
   .dashboard-section-head .row-link {
     padding: 4px 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .workflow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-card {
+    min-height: 0;
   }
 }
 

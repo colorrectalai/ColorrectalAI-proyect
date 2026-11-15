@@ -11,7 +11,7 @@
           <p>Una plataforma académica para revisar imágenes, visualizar regiones de interés y consultar resultados experimentales.</p>
           <div class="hero-actions">
             <RouterLink class="button" to="/registro">Iniciar interpretacion <ArrowRight /></RouterLink>
-            <RouterLink class="hero-secondary" to="/acceso">Conocer el proyecto<ArrowDown /></RouterLink>
+            <RouterLink class="hero-secondary" to="/#acerca">Conocer el proyecto<ArrowDown /></RouterLink>
           </div>
           <ul class="hero-features" aria-label="Características de ColorrectalAI">
             <li class="hero-feature">
@@ -144,7 +144,8 @@
 // Reutiliza la marca compartida y mantiene en datos los textos repetidos de estas secciones.
 import { onMounted, onUnmounted } from 'vue'
 import BrandLogo from '../components/BrandLogo.vue'
-import { ArrowRight, ArrowDown, CloudUpload, ScanSearch, Images, BookOpenText } from '@lucide/vue'
+import { ArrowRight, ArrowDown } from '@lucide/vue'
+import { workflowSteps } from '../data/workflowSteps'
 
 let sectionRevealObserver
 
@@ -177,14 +178,6 @@ const symptoms = [
   'Dolor, cólicos o hinchazón abdominal frecuente.',
   'Cansancio extremo o anemia inexplicable.',
   'Pérdida de peso sin motivo aparente.',
-]
-
-// Etapas del flujo educativo que la plataforma permite explorar.
-const workflowSteps = [
-  { number: '01', icon: CloudUpload, title: 'Prepara las imágenes', description: 'Selecciona archivos JPG o PNG y verifica que no incluyan datos personales.' },
-  { number: '02', icon: ScanSearch, title: 'Ejecuta el análisis', description: 'Consulta las etapas de procesamiento y conserva la configuración del ejemplo.' },
-  { number: '03', icon: Images, title: 'Compara las salidas', description: 'Explora el original, la máscara de segmentación y la superposición de ROI.' },
-  { number: '04', icon: BookOpenText, title: 'Documenta el contexto', description: 'Revisa la clasificación experimental, la predicción y el score de confianza.' },
 ]
 
 // Límites de interpretación de las salidas experimentales.
@@ -445,7 +438,7 @@ const resultLimits = [
   color: #fff;
 }
 .project-band {
-  scroll-margin-top: 88px;
+  scroll-margin-top: 96px;
   height: 400px;
   position: relative;   /* Referencia para atrapar al pseudoelemento */
   isolation: isolate;   /* Evita que el fondo se esconda detrás del body */
@@ -623,6 +616,7 @@ const resultLimits = [
   .cancer-inner, .project-inner, .limits-inner { grid-template-columns: 1fr; }
   .cancer-inner { gap: 24px; padding: 32px 0; }
   .project-inner { gap: 22px; padding: 28px 0; }
+  .project-band { scroll-margin-top: 120px; }
   .project-brand-panel { min-height: 125px; }
   .exploration-inner { padding: 32px 0 36px; }
   .exploration-heading { grid-template-columns: 1fr; gap: 8px; }
