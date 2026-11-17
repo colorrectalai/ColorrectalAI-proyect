@@ -10,15 +10,18 @@ from contextlib import asynccontextmanager
 from pathlib import Path
  
 from fastapi import FastAPI, File, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from starlette.concurrency import run_in_threadpool
+from starlette.exceptions import HTTPException as StarletteHTTPException
  
 from ia.adaptador_yolo import AdaptadorYOLO
 from ia.config import cargar_config
 from . import db
 from .admision import Admision
-from .errores import ErrorAPI, manejar_error_api, manejar_error_interno
+from .errores import (ErrorAPI, manejar_error_api, manejar_error_interno,
+                      manejar_http, manejar_validacion)
 from .esquemas import EstadoSalud, RespuestaInferencia
 from .servicio_inferencia import analizar
 from .validacion import validar_imagen
@@ -30,7 +33,7 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def ciclo_vida(app: FastAPI):
     cfg = app.state.cfg
-    app.state.admision = Admision(cfg.max_concurrentes)
+    app.state.admision = Admision(cfg.max_concurrentes, cfg.espera_max_s)
  
     async def cargar():               # no bloquea el arranque: /salud responde "cargando"
         try:
@@ -65,6 +68,8 @@ def crear_app(cfg=None, modelo=None) -> FastAPI:
     app.add_middleware(CORSMiddleware, allow_origins=list(cfg.origenes_cors),
                        allow_methods=["GET", "POST"], allow_headers=["*"])
     app.add_exception_handler(ErrorAPI, manejar_error_api)
+    app.add_exception_handler(RequestValidationError, manejar_validacion)
+    app.add_exception_handler(StarletteHTTPException, manejar_http)
     app.add_exception_handler(Exception, manejar_error_interno)
  
     @app.get("/api/v1/salud", response_model=EstadoSalud, tags=["estado"])
@@ -80,10 +85,10 @@ def crear_app(cfg=None, modelo=None) -> FastAPI:
         sha = app.state.modelo.sha256_real
         datos = img = None
         try:
-            cupo = app.state.admision.entrar(app.state.modelo.listo)
+            app.state.admision.entrar(app.state.modelo.listo)
             datos = await imagen.read(cfg.max_bytes_imagen + 1)
             img = validar_imagen(datos, cfg)
-            async with cupo:
+            async with app.state.admision.cupo():
                 respuesta = await run_in_threadpool(analizar, img, app.state.modelo, cfg)
         except Exception as e:           # registro operacional (opcional, solo si hay base de datos)
             codigo = e.codigo if isinstance(e, ErrorAPI) else "ERROR_INTERNO"

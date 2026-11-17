@@ -27,7 +27,9 @@ class Config:
 
     # --- Admisión y validación ---
     max_concurrentes: int = field(default_factory=lambda: _env("MAX_CONCURRENTES", 2, int))
-    max_bytes_imagen: int = field(default_factory=lambda: _env("MAX_MB_IMAGEN", 8, int) * 1024 * 1024)
+    # Segundos que una solicitud espera cupo antes de recibir 503 SIN_CUPO (DEF-09)
+    espera_max_s: float = field(default_factory=lambda: _env("ESPERA_MAX_S", 20, float))
+    max_bytes_imagen: int = field(default_factory=lambda: _env("MAX_MB_IMAGEN", 10, int) * 1024 * 1024)
     max_lado_px: int = field(default_factory=lambda: _env("MAX_LADO_PX", 6000, int))
     formatos_ok: tuple = ("JPEG", "PNG")
 

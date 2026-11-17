@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../components/AuthLayout.vue'
+import { guardarPerfilLocal } from '../userProfile'
 
 const router = useRouter()
 // Datos escritos por la persona durante la creación de su perfil.
@@ -32,6 +33,9 @@ function submit() {
     return
   }
 
+  // Conserva el nombre vinculado al correo para el saludo y la barra de navegación.
+  guardarPerfilLocal(email.value, name.value)
+  localStorage.setItem('colorrectalai-session', 'active')
   router.push('/inicio')
 }
 </script>

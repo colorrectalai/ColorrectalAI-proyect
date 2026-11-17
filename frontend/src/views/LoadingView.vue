@@ -3,7 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BrandLogo from '../components/BrandLogo.vue'
 import { analizarImagen } from '../api'
-import { estado } from '../store'
+import { guardarInterpretacion } from '../history'
+import { estado, liberarUrlsResultados } from '../store'
 
 const router = useRouter()
 const hechas = ref(0)
@@ -14,7 +15,9 @@ const porcentaje = computed(() => (total.value ? Math.round((hechas.value / tota
 // Envía cada imagen a la API, una tras otra, y al terminar muestra los resultados.
 onMounted(async () => {
   if (!total.value) return router.replace('/carga')
+  liberarUrlsResultados()
   estado.resultados = []
+  estado.historialError = ''
   try {
     for (const archivo of estado.archivos) {
       const respuesta = await analizarImagen(archivo)
@@ -22,6 +25,20 @@ onMounted(async () => {
       hechas.value++
     }
     estado.id = 'A-' + estado.resultados[0].respuesta.id.slice(0, 6).toUpperCase()
+    try {
+      await guardarInterpretacion({
+        id: estado.id,
+        createdAt: new Date().toISOString(),
+        resultados: estado.resultados.map((resultado, index) => ({
+          nombre: resultado.nombre,
+          archivo: estado.archivos[index],
+          respuesta: resultado.respuesta,
+        })),
+      })
+    } catch (errorGuardar) {
+      console.error('No se pudo guardar la interpretación en el historial local:', errorGuardar)
+      estado.historialError = errorGuardar.message || 'No se pudo guardar la interpretación en este navegador.'
+    }
     router.replace('/resultados/' + estado.id)
   } catch (e) {
     error.value = e.message
