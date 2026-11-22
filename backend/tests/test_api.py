@@ -7,7 +7,7 @@ from api.admision import Admision
 from api.errores import ErrorAPI
 from api.main import crear_app
 from ia.config import Config
-from .conftest import ModeloFalso, png_bytes
+from .conftest import ModeloFalso, ModeloFalsoSeg, png_bytes
 
 
 def _post(cliente, datos, nombre="a.png", tipo="image/png"):
@@ -135,3 +135,25 @@ def test_admision_rechaza_si_se_agota_la_espera():
         async with a.cupo():        # el cupo se liberó
             pass
     asyncio.run(probar())
+
+
+# --- Modelo de segmentación: la respuesta incluye la máscara ---
+def test_segmentacion_devuelve_mascara(cliente_seg):
+    r = _post(cliente_seg, png_bytes())
+    assert r.status_code == 200
+    j = r.json()
+    assert j["clasificacion"] == "posible_region" and len(j["rois"]) == 1
+    assert j["mascara_resultado"].startswith("data:image/png;base64,")
+    assert j["mascara_bn"].startswith("data:image/png;base64,")
+    assert j["imagen_resultado"].startswith("data:image/jpeg;base64,")
+
+
+def test_segmentacion_sin_hallazgos_no_trae_mascara():
+    with TestClient(crear_app(Config(), ModeloFalsoSeg(con_deteccion=False))) as c:
+        j = _post(c, png_bytes()).json()
+    assert j["clasificacion"] == "sin_hallazgos" and j["mascara_resultado"] is None and j["mascara_bn"] is None
+
+
+def test_deteccion_sin_mascara(cliente):
+    j = _post(cliente, png_bytes()).json()
+    assert j["mascara_resultado"] is None and j["mascara_bn"] is None

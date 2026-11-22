@@ -27,7 +27,13 @@ class RespuestaInferencia(BaseModel):
     rois: list[ROI]
     imagen_ancho: int
     imagen_alto: int
-    imagen_resultado: Optional[str] = Field(None, description="data-URL con la ROI dibujada")
+    imagen_resultado: Optional[str] = Field(None, description="data-URL con la ROI (o la máscara) dibujada")
+    mascara_resultado: Optional[str] = Field(
+        None, description="data-URL PNG transparente con solo la máscara (modelo de segmentación); "
+                          "misma proporción que la imagen original, para superponerla al 100 %")
+    mascara_bn: Optional[str] = Field(
+        None, description="data-URL PNG en blanco y negro (blanco = región segmentada, negro = fondo); "
+                          "misma proporción que la imagen original. Solo con modelo de segmentación")
     metricas: Metricas
     modelo_version: str
     aviso: str

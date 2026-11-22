@@ -82,19 +82,30 @@ const mostrarImagen = (indice) => {
             </div>
           </div>
 
-          <!-- La ROI se dibuja sobre la imagen original usando coordenadas normalizadas de la API. -->
-          <div class="image-stage">
-            <div class="image-frame">
-              <img :src="resultadoActual.url" :alt="`Imagen endoscópica ${indiceActual + 1}`" />
-              <div
-                v-for="(roi, roiIndex) in resultadoActual.respuesta.rois"
-                :key="roiIndex"
-                class="roi-box"
-                :style="{ left: porcentaje(roi.x), top: porcentaje(roi.y), width: porcentaje(roi.ancho), height: porcentaje(roi.alto) }"
-              >
-                <span>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</span>
+          <!-- La ROI se dibuja sobre la imagen original usando coordenadas normalizadas de la API.
+               Con el modelo de segmentación, al lado se muestra la máscara en blanco y negro. -->
+          <div class="image-stage" :class="{ 'con-mascara-bn': resultadoActual.respuesta.mascara_bn }">
+            <figure class="visor-panel">
+              <div class="image-frame">
+                <img :src="resultadoActual.url" :alt="`Imagen endoscópica ${indiceActual + 1}`" />
+                <div
+                  v-for="(roi, roiIndex) in resultadoActual.respuesta.rois"
+                  :key="roiIndex"
+                  class="roi-box"
+                  :style="{ left: porcentaje(roi.x), top: porcentaje(roi.y), width: porcentaje(roi.ancho), height: porcentaje(roi.alto) }"
+                >
+                  <span>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</span>
+                </div>
               </div>
-            </div>
+              <figcaption v-if="resultadoActual.respuesta.mascara_bn">Imagen con ROI</figcaption>
+            </figure>
+
+            <figure v-if="resultadoActual.respuesta.mascara_bn" class="visor-panel">
+              <div class="image-frame">
+                <img class="mascara-bn" :src="resultadoActual.respuesta.mascara_bn" alt="Máscara de segmentación en blanco y negro" />
+              </div>
+              <figcaption>Máscara de segmentación</figcaption>
+            </figure>
           </div>
 
           <!-- Controles de imagen anterior/siguiente y selección directa. -->
@@ -525,6 +536,39 @@ const mostrarImagen = (indice) => {
   border: 2px solid #05c5de;
   border-radius: 8px;
   box-shadow: 0 0 0 2px rgb(5 197 222 / 15%);
+}
+
+/* Con modelo de segmentación: imagen con ROI y máscara en blanco y negro, lado a lado. */
+.image-stage.con-mascara-bn {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.visor-panel {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  gap: 8px;
+  justify-items: center;
+}
+
+.visor-panel figcaption {
+  color: #52606d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.image-frame > img.mascara-bn {
+  border: 1px solid #1f2937;
+}
+
+@media (max-width: 560px) {
+  .image-stage.con-mascara-bn {
+    grid-template-columns: 1fr;
+  }
 }
 
 .roi-box > span {
