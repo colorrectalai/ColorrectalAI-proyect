@@ -5,6 +5,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [vue()],
   preview: {
-    allowedHosts: ['attractive-insight-production.up.railway.app'],
+    allowedHosts: [
+      'attractive-insight-production.up.railway.app',
+      'colorrectalai-production.up.railway.app',
+    ],
   },
 })
