@@ -6,6 +6,8 @@ import { obtenerMiniatura } from '../history'
 const props = defineProps({
   items: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
+  downloadingId: { type: String, default: '' },
+  downloadLabel: { type: String, default: 'Descargar resumen JSON' },
   emptyTitle: { type: String, default: 'Todavía no hay interpretaciones guardadas' },
   emptyDescription: { type: String, default: 'Cuando completes un análisis, aparecerá aquí.' },
   emptyTo: { type: String, default: '' },
@@ -100,7 +102,7 @@ onUnmounted(() => {
           <td>
             <div class="row-actions">
               <button class="open-button" type="button" @click="emit('open', item)">Abrir <ArrowRight aria-hidden="true" /></button>
-              <button class="download-button" type="button" :aria-label="`Descargar resumen de ${item.id}`" title="Descargar resumen JSON" @click="emit('download', item)"><Download aria-hidden="true" /></button>
+              <button class="download-button" type="button" :disabled="downloadingId === item.id" :aria-label="`${downloadLabel} de ${item.id}`" :title="downloadingId === item.id ? 'Generando PDF...' : downloadLabel" @click="emit('download', item)"><Download aria-hidden="true" /></button>
             </div>
           </td>
         </tr>
@@ -147,6 +149,7 @@ onUnmounted(() => {
 .open-button:hover, .download-button:hover { background: #eef8ff; }
 .open-button svg { width: 16px; height: 16px; }
 .download-button { width: 40px; padding: 0; }
+.download-button:disabled { opacity: .55; cursor: wait; }
 .download-button svg { width: 18px; height: 18px; }
 .empty-cell { padding: 36px 18px !important; text-align: center; }
 .empty-cell strong { margin-bottom: 5px; font-size: 16px !important; }

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { ArrowRight, FileImage, Images, Info, ScanSearch } from '@lucide/vue'
 import { estado } from '../store'
 
@@ -7,6 +7,13 @@ const resultados = computed(() => estado.resultados)
 const vista = ref('individual')
 const indiceActual = ref(0)
 const resultadoActual = computed(() => resultados.value[indiceActual.value] || null)
+const visorAmpliado = ref(false)
+const visualAmpliado = ref('roi')
+const zoomActual = ref(1)
+const desplazamientoImagen = ref({ x: 0, y: 0 })
+const arrastreImagen = ref(null)
+const escenarioAmpliado = ref(null)
+let desbordamientoAnterior = ''
 
 // Resume las detecciones de toda la interpretación para la vista panorámica.
 const totalRegiones = computed(() =>
@@ -24,6 +31,31 @@ const confianzaPromedio = computed(() => {
 // Mantiene los valores del servicio en escala porcentual para etiquetas y barras.
 const porcentaje = (valor = 0) => `${(valor * 100).toFixed(1)}%`
 const anchoBarra = (valor = 0) => ({ width: `${Math.max(0, Math.min(valor * 100, 100))}%` })
+// Corrige las coordenadas ROI cuando las miniaturas recortan la imagen con object-fit: cover.
+const estiloROIEnMiniatura = (roi, resultado, aspectoContenedor) => {
+  const { imagen_ancho: ancho, imagen_alto: alto } = resultado.respuesta
+  if (!ancho || !alto) {
+    return { left: porcentaje(roi.x), top: porcentaje(roi.y), width: porcentaje(roi.ancho), height: porcentaje(roi.alto) }
+  }
+
+  const aspectoImagen = ancho / alto
+  let x = roi.x
+  let y = roi.y
+  let width = roi.ancho
+  let height = roi.alto
+
+  if (aspectoImagen > aspectoContenedor) {
+    const porcionVisible = aspectoContenedor / aspectoImagen
+    x = (x - (1 - porcionVisible) / 2) / porcionVisible
+    width /= porcionVisible
+  } else if (aspectoImagen < aspectoContenedor) {
+    const porcionVisible = aspectoImagen / aspectoContenedor
+    y = (y - (1 - porcionVisible) / 2) / porcionVisible
+    height /= porcionVisible
+  }
+
+  return { left: porcentaje(x), top: porcentaje(y), width: porcentaje(width), height: porcentaje(height) }
+}
 const clasificacion = (resultado) =>
   resultado.respuesta.clasificacion === 'posible_region'
     ? 'Posible pólipo'
@@ -38,6 +70,72 @@ const mostrarImagen = (indice) => {
   seleccionarImagen(indice)
   vista.value = 'individual'
 }
+
+// Abre un visor de pantalla completa con alternancia entre ROI, máscara y superposición.
+const abrirVisor = () => {
+  if (visorAmpliado.value) return
+  visualAmpliado.value = 'roi'
+  reiniciarZoom()
+  desbordamientoAnterior = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  visorAmpliado.value = true
+  window.addEventListener('keydown', cerrarConEscape)
+}
+const cerrarVisor = () => {
+  if (!visorAmpliado.value) return
+  visorAmpliado.value = false
+  reiniciarZoom()
+  document.body.style.overflow = desbordamientoAnterior
+  window.removeEventListener('keydown', cerrarConEscape)
+}
+const cerrarConEscape = (evento) => {
+  if (evento.key === 'Escape') cerrarVisor()
+}
+const ajustarZoom = (cambio, punto = null) => {
+  const zoomAnterior = zoomActual.value
+  const zoomNuevo = Math.max(1, Math.min(4, Number((zoomAnterior + cambio).toFixed(2))))
+  const rect = escenarioAmpliado.value?.getBoundingClientRect()
+
+  if (!rect || zoomNuevo === zoomAnterior) return
+
+  // Conserva bajo el cursor el mismo punto de la imagen mientras cambia el zoom.
+  const anclaX = punto ? punto.x - rect.left - rect.width / 2 : 0
+  const anclaY = punto ? punto.y - rect.top - rect.height / 2 : 0
+  desplazamientoImagen.value = zoomNuevo === 1
+    ? { x: 0, y: 0 }
+    : {
+        x: anclaX - ((anclaX - desplazamientoImagen.value.x) * zoomNuevo) / zoomAnterior,
+        y: anclaY - ((anclaY - desplazamientoImagen.value.y) * zoomNuevo) / zoomAnterior,
+      }
+  zoomActual.value = zoomNuevo
+}
+const ajustarZoomConRueda = (evento) =>
+  ajustarZoom(evento.deltaY < 0 ? 0.2 : -0.2, { x: evento.clientX, y: evento.clientY })
+const reiniciarZoom = () => {
+  zoomActual.value = 1
+  desplazamientoImagen.value = { x: 0, y: 0 }
+  arrastreImagen.value = null
+}
+const estiloZoom = computed(() => ({
+  transform: `translate(${desplazamientoImagen.value.x}px, ${desplazamientoImagen.value.y}px) scale(${zoomActual.value})`,
+}))
+const iniciarArrastre = (evento) => {
+  if (zoomActual.value <= 1) return
+  arrastreImagen.value = {
+    x: evento.clientX - desplazamientoImagen.value.x,
+    y: evento.clientY - desplazamientoImagen.value.y,
+  }
+  evento.currentTarget.setPointerCapture(evento.pointerId)
+}
+const moverArrastre = (evento) => {
+  if (!arrastreImagen.value) return
+  desplazamientoImagen.value = {
+    x: evento.clientX - arrastreImagen.value.x,
+    y: evento.clientY - arrastreImagen.value.y,
+  }
+}
+const terminarArrastre = () => { arrastreImagen.value = null }
+onBeforeUnmount(cerrarVisor)
 </script>
 
 <template>
@@ -84,7 +182,15 @@ const mostrarImagen = (indice) => {
 
           <!-- La ROI se dibuja sobre la imagen original usando coordenadas normalizadas de la API.
                Con el modelo de segmentación, al lado se muestra la máscara en blanco y negro. -->
-          <div class="image-stage" :class="{ 'con-mascara-bn': resultadoActual.respuesta.mascara_bn }">
+          <div
+            class="image-stage"
+            :class="{ 'con-mascara-bn': resultadoActual.respuesta.mascara_bn }"
+            role="button"
+            tabindex="0"
+            :aria-label="`Ampliar la imagen y sus resultados: ${resultadoActual.nombre}`"
+            @click="abrirVisor"
+            @keydown.enter.space.prevent="abrirVisor"
+          >
             <figure class="visor-panel">
               <div class="image-frame">
                 <img :src="resultadoActual.url" :alt="`Imagen endoscópica ${indiceActual + 1}`" />
@@ -97,7 +203,7 @@ const mostrarImagen = (indice) => {
                   <span>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</span>
                 </div>
               </div>
-              <figcaption v-if="resultadoActual.respuesta.mascara_bn">Imagen con ROI</figcaption>
+                <figcaption>Imagen con ROI · clic para ampliar</figcaption>
             </figure>
 
             <figure v-if="resultadoActual.respuesta.mascara_bn" class="visor-panel">
@@ -138,10 +244,8 @@ const mostrarImagen = (indice) => {
           <section class="interpretation-section individual-results" aria-labelledby="individual-results-title">
           <div class="section-heading results-section-heading">
             <div>
-              <p class="section-kicker">LECTURA DEL MODELO</p>
-              <h2 id="individual-results-title">Interpretación del resultado</h2>
+              <h2 id="individual-results-title">Lectura del modelo</h2>
             </div>
-            <span class="experimental-label">Clasificación experimental</span>
           </div>
 
           <div class="finding-banner" :class="{ clear: !tieneHallazgo(resultadoActual) }">
@@ -159,7 +263,6 @@ const mostrarImagen = (indice) => {
               <div class="confidence-track" role="meter" :aria-valuenow="(resultadoActual.respuesta.confianza || 0) * 100" aria-valuemin="0" aria-valuemax="100" aria-label="Confianza experimental">
                 <span :style="anchoBarra(resultadoActual.respuesta.confianza)"></span>
               </div>
-              <small>Estimación experimental</small>
             </article>
 
             <article class="detail-metric">
@@ -215,7 +318,23 @@ const mostrarImagen = (indice) => {
               @click="mostrarImagen(indice)"
             >
               <span class="gallery-image">
-                <img :src="resultado.respuesta.imagen_resultado || resultado.url" :alt="`Resultado de ${resultado.nombre}`" />
+                <span v-if="resultado.respuesta.mascara_resultado || resultado.respuesta.mascara_bn" class="general-image-composite">
+                  <img :src="resultado.url" :alt="`Imagen endoscópica con segmentación: ${resultado.nombre}`" />
+                  <img
+                    class="general-mask-overlay"
+                    :class="{ 'binary-mask-overlay': !resultado.respuesta.mascara_resultado }"
+                    :src="resultado.respuesta.mascara_resultado || resultado.respuesta.mascara_bn"
+                    alt=""
+                  />
+                  <span
+                    v-for="(roi, roiIndex) in resultado.respuesta.rois"
+                    :key="`galeria-roi-${roiIndex}`"
+                    class="general-roi-frame"
+                    aria-hidden="true"
+                    :style="estiloROIEnMiniatura(roi, resultado, 4 / 3)"
+                  ><small>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</small></span>
+                </span>
+                <img v-else :src="resultado.respuesta.imagen_resultado || resultado.url" :alt="`Resultado de ${resultado.nombre}`" />
                 <span class="gallery-index">{{ String(indice + 1).padStart(2, '0') }}</span>
               </span>
               <span class="gallery-caption">
@@ -270,8 +389,27 @@ const mostrarImagen = (indice) => {
                 <tr v-for="(resultado, indice) in resultados" :key="resultado.respuesta.id">
                   <td>
                     <div class="table-image-cell">
-                      <img :src="resultado.respuesta.imagen_resultado || resultado.url" :alt="''" />
-                      <span><strong>{{ resultado.nombre }}</strong><small>Imagen {{ String(indice + 1).padStart(2, '0') }}</small></span>
+                      <span class="table-image-name"><strong>{{ resultado.nombre }}</strong><small>Imagen {{ String(indice + 1).padStart(2, '0') }}</small></span>
+                      <span class="table-image-pair">
+                        <span v-if="resultado.respuesta.mascara_resultado || resultado.respuesta.mascara_bn" class="table-image-composite">
+                          <img :src="resultado.url" :alt="`Imagen endoscópica con segmentación: ${resultado.nombre}`" />
+                          <img
+                            class="general-mask-overlay"
+                            :class="{ 'binary-mask-overlay': !resultado.respuesta.mascara_resultado }"
+                            :src="resultado.respuesta.mascara_resultado || resultado.respuesta.mascara_bn"
+                            alt=""
+                          />
+                          <span
+                            v-for="(roi, roiIndex) in resultado.respuesta.rois"
+                            :key="`tabla-roi-${roiIndex}`"
+                            class="general-roi-frame"
+                            aria-hidden="true"
+                            :style="estiloROIEnMiniatura(roi, resultado, 99 / 72)"
+                          ><small>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</small></span>
+                        </span>
+                        <img v-else :src="resultado.respuesta.imagen_resultado || resultado.url" :alt="`Resultado de ${resultado.nombre}`" />
+                        <img v-if="resultado.respuesta.mascara_bn" class="table-mask-image" :src="resultado.respuesta.mascara_bn" :alt="`Máscara de segmentación: ${resultado.nombre}`" />
+                      </span>
                     </div>
                   </td>
                   <td><span class="classification-chip" :class="{ neutral: !tieneHallazgo(resultado) }"><ScanSearch aria-hidden="true" />{{ clasificacion(resultado) }}</span></td>
@@ -286,6 +424,75 @@ const mostrarImagen = (indice) => {
           </div>
         </section>
       </template>
+
+      <!-- Visor ampliado: permite comparar la ROI, la máscara binaria y su superposición. -->
+      <Teleport to="body">
+        <div
+          v-if="visorAmpliado && resultadoActual"
+          class="image-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Visor ampliado de resultados"
+          @click="cerrarVisor"
+        >
+          <section class="lightbox-content">
+            <header class="lightbox-header" @click.stop>
+              <div>
+                <p>REVISIÓN VISUAL</p>
+                <h2>{{ resultadoActual.nombre }}</h2>
+                <span>Imagen {{ indiceActual + 1 }} de {{ resultados.length }}</span>
+              </div>
+              <button class="lightbox-close" type="button" aria-label="Cerrar visor ampliado" @click="cerrarVisor">×</button>
+            </header>
+
+            <div class="lightbox-tabs" role="tablist" aria-label="Visualización ampliada" @click.stop>
+              <button type="button" role="tab" :aria-selected="visualAmpliado === 'roi'" :class="{ active: visualAmpliado === 'roi' }" @click="visualAmpliado = 'roi'">
+                Imagen con ROI
+              </button>
+              <button v-if="resultadoActual.respuesta.mascara_resultado" type="button" role="tab" :aria-selected="visualAmpliado === 'superpuesta'" :class="{ active: visualAmpliado === 'superpuesta' }" @click="visualAmpliado = 'superpuesta'">
+                Máscara superpuesta
+              </button>
+              <button v-if="resultadoActual.respuesta.mascara_bn" type="button" role="tab" :aria-selected="visualAmpliado === 'mascara'" :class="{ active: visualAmpliado === 'mascara' }" @click="visualAmpliado = 'mascara'">
+                Máscara B/N
+              </button>
+            </div>
+
+            <div class="lightbox-zoom-controls" @click.stop>
+              <button type="button" aria-label="Alejar imagen" :disabled="zoomActual <= 1" @click="ajustarZoom(-0.25)">−</button>
+              <button class="zoom-readout" type="button" aria-label="Restablecer zoom" @click="reiniciarZoom">{{ Math.round(zoomActual * 100) }}%</button>
+              <button type="button" aria-label="Acercar imagen" :disabled="zoomActual >= 4" @click="ajustarZoom(0.25)">+</button>
+            </div>
+
+            <div ref="escenarioAmpliado" class="lightbox-stage" @wheel.prevent="ajustarZoomConRueda">
+              <div
+                class="lightbox-image-frame"
+                :class="{ zoomed: zoomActual > 1, dragging: arrastreImagen }"
+                :style="estiloZoom"
+                @pointerdown="iniciarArrastre"
+                @pointermove="moverArrastre"
+                @pointerup="terminarArrastre"
+                @pointercancel="terminarArrastre"
+                @click.stop
+              >
+                <template v-if="visualAmpliado !== 'mascara'">
+                  <img :src="resultadoActual.url" :alt="`Imagen endoscópica ampliada ${resultadoActual.nombre}`" />
+                  <img v-if="visualAmpliado === 'superpuesta'" class="lightbox-mask-overlay" :src="resultadoActual.respuesta.mascara_resultado" alt="Máscara de segmentación superpuesta" />
+                  <template v-if="visualAmpliado === 'roi' || visualAmpliado === 'superpuesta'">
+                    <div
+                      v-for="(roi, roiIndex) in resultadoActual.respuesta.rois"
+                      :key="roiIndex"
+                      class="roi-box"
+                      :style="{ left: porcentaje(roi.x), top: porcentaje(roi.y), width: porcentaje(roi.ancho), height: porcentaje(roi.alto) }"
+                    ><span>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</span></div>
+                  </template>
+                </template>
+                <img v-else class="lightbox-binary-mask" :src="resultadoActual.respuesta.mascara_bn" alt="Máscara de segmentación en blanco y negro" />
+              </div>
+            </div>
+            <p class="lightbox-hint">Usa la rueda o los botones para acercar; arrastra la imagen ampliada. Haz clic fuera para cerrar.</p>
+          </section>
+        </div>
+      </Teleport>
 
       <!-- Acciones del flujo disponibles después de cualquiera de las dos vistas. -->
       <div class="results-actions">
@@ -359,13 +566,13 @@ const mostrarImagen = (indice) => {
   display: flex;
   flex: 0 0 auto;
   width: min(100%, 350px);
-  gap: 4px;
+  gap: 3px;
   margin: 0;
   padding: 4px;
-  border: 1px solid #c7def0;
-  border-radius: 15px;
-  background: #fff;
-  box-shadow: 0 5px 15px rgb(21 75 117 / 7%);
+  border: 0;
+  border-radius: 13px;
+  background: #edf4f9;
+  box-shadow: none;
 }
 .view-tab {
   display: inline-flex;
@@ -398,7 +605,14 @@ const mostrarImagen = (indice) => {
 .view-tab.active {
   background: var(--blue);
   color: #fff;
-  box-shadow: 0 4px 10px rgb(0 119 218 / 22%);
+  box-shadow: none;
+}
+
+.view-tab:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
 }
 
 /* Imágenes en una superficie limpia, sin fondo ilustrado o decorativo. */
@@ -512,6 +726,15 @@ const mostrarImagen = (indice) => {
   border: 1px solid #e4ebf0;
   border-radius: 12px;
   background: #f8fafc;
+  cursor: zoom-in;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.image-stage:hover,
+.image-stage:focus-visible {
+  border-color: #7fc8f4;
+  box-shadow: 0 0 0 3px rgb(0 157 255 / 12%);
+  outline: none;
 }
 
 .image-frame {
@@ -913,6 +1136,61 @@ const mostrarImagen = (indice) => {
   object-fit: cover;
 }
 
+.general-image-composite,
+.table-image-composite {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.general-image-composite > img,
+.table-image-composite > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.general-image-composite > img.general-mask-overlay,
+.table-image-composite > img.general-mask-overlay {
+  mix-blend-mode: screen;
+  opacity: 0.95;
+}
+
+.general-image-composite > img.general-mask-overlay.binary-mask-overlay,
+.table-image-composite > img.general-mask-overlay.binary-mask-overlay {
+  filter: sepia(1) saturate(1000%) hue-rotate(155deg);
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
+.general-roi-frame {
+  position: absolute;
+  z-index: 1;
+  border: 2px solid #08c9ed;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgb(2 23 45 / 40%), 0 0 12px rgb(0 197 255 / 55%);
+  pointer-events: none;
+}
+
+.general-roi-frame small {
+  position: absolute;
+  top: -15px;
+  left: -2px;
+  padding: 2px 5px;
+  border-radius: 4px 4px 0 0;
+  background: #08c9ed;
+  color: #02172d;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
 .gallery-index {
   position: absolute;
   top: 9px;
@@ -959,6 +1237,193 @@ const mostrarImagen = (indice) => {
 .detection-status:not(.clear) {
   background: #e5f8f0;
   color: #137751;
+}
+
+/* Visor ampliado sobre un fondo oscuro para comparar la imagen y la máscara. */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 28px;
+  background: rgb(2 23 45 / 62%);
+  -webkit-backdrop-filter: saturate(0.65) brightness(0.48) blur(3px);
+  backdrop-filter: saturate(0.65) brightness(0.48) blur(3px);
+  color: #fff;
+}
+
+.lightbox-content {
+  display: flex;
+  width: min(1500px, 100%);
+  min-height: min(680px, calc(100vh - 56px));
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lightbox-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lightbox-header p {
+  margin: 0 0 5px;
+  color: #42c6ff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.lightbox-header h2 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(18px, 2vw, 25px);
+}
+
+.lightbox-header span,
+.lightbox-hint {
+  color: #b8c9d8;
+  font-size: 12px;
+}
+
+.lightbox-close {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox-close:hover {
+  background: rgb(255 255 255 / 18%);
+}
+
+.lightbox-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lightbox-tabs button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid rgb(193 220 242 / 38%);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 7%);
+  color: #e8f4ff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lightbox-tabs button.active {
+  border-color: #009dff;
+  background: #078de2;
+  color: #fff;
+}
+
+.lightbox-zoom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.lightbox-zoom-controls button {
+  display: grid;
+  min-width: 38px;
+  height: 36px;
+  place-items: center;
+  padding: 0 10px;
+  border: 1px solid rgb(193 220 242 / 38%);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.lightbox-zoom-controls button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 18%);
+}
+
+.lightbox-zoom-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lightbox-zoom-controls .zoom-readout {
+  min-width: 64px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lightbox-stage {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  place-items: center;
+  overflow: hidden;
+}
+
+.lightbox-image-frame {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  max-height: min(72vh, 760px);
+  line-height: 0;
+  transform-origin: center;
+  transition: transform 140ms ease;
+  cursor: zoom-in;
+  touch-action: none;
+  user-select: none;
+}
+
+.lightbox-image-frame.zoomed {
+  cursor: grab;
+}
+
+.lightbox-image-frame.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.lightbox-image-frame > img:first-child,
+.lightbox-binary-mask {
+  display: block;
+  width: auto;
+  max-width: min(90vw, 1440px);
+  max-height: min(72vh, 760px);
+  border-radius: 10px;
+  object-fit: contain;
+  box-shadow: 0 22px 68px rgb(0 0 0 / 58%), 0 0 0 1px rgb(255 255 255 / 14%);
+}
+
+.lightbox-mask-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lightbox-binary-mask {
+  background: #000;
+}
+
+.lightbox-hint {
+  margin: 0;
+  text-align: center;
 }
 
 .interpretation-section.general-results {
@@ -1053,37 +1518,78 @@ const mostrarImagen = (indice) => {
 .table-image-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 170px;
+  gap: 12px;
+  min-width: 365px;
 }
 
-.table-image-cell img {
+.table-image-name {
   display: block;
-  flex: 0 0 66px;
-  width: 66px;
-  height: 48px;
-  border-radius: 6px;
-  background: #eef2f5;
-  object-fit: cover;
+  flex: 0 0 130px;
+  min-width: 0;
 }
 
-.table-image-cell strong,
-.table-image-cell small {
+.table-image-name strong,
+.table-image-name small {
   display: block;
 }
 
-.table-image-cell strong {
-  max-width: 160px;
+.table-image-name strong {
   overflow: hidden;
   color: var(--navy);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.table-image-cell small {
+.table-image-name small {
   margin-top: 3px;
   color: var(--muted);
   font-size: 10px;
+}
+
+.table-image-pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-image-pair > img {
+  display: block;
+  flex: 0 0 99px;
+  width: 99px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #eef2f5;
+}
+
+.table-image-pair > img {
+  object-fit: cover;
+}
+
+.table-image-pair > .table-image-composite {
+  flex: 0 0 99px;
+  width: 99px;
+  height: 72px;
+  border-radius: 7px;
+  background: #eef2f5;
+}
+
+.table-image-composite .general-roi-frame {
+  border-width: 1px;
+  border-radius: 2px;
+}
+
+.table-image-composite .general-roi-frame small {
+  top: -10px;
+  left: -1px;
+  padding: 1px 3px;
+  font-size: 5px;
+}
+
+.table-image-pair > img.table-mask-image {
+  border: 1px solid #657687;
+  background: #05090d;
+  object-fit: contain;
 }
 
 .classification-chip {
@@ -1321,6 +1827,27 @@ const mostrarImagen = (indice) => {
   .interpretation-section {
     padding: 15px;
     border-radius: 12px;
+  }
+
+  .image-lightbox {
+    padding: 15px;
+  }
+
+  .lightbox-content {
+    min-height: calc(100vh - 30px);
+    min-height: calc(100dvh - 30px);
+    gap: 12px;
+  }
+
+  .lightbox-image-frame {
+    max-height: 65vh;
+    max-height: 65dvh;
+  }
+
+  .lightbox-image-frame > img:first-child,
+  .lightbox-binary-mask {
+    max-height: 65vh;
+    max-height: 65dvh;
   }
 
   .section-heading {
