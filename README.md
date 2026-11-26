@@ -4,7 +4,7 @@
 
 Proyecto académico de la asignatura **Gestión de Proyectos de TI** — Ingeniería de Sistemas, Universidad Santiago de Cali (USC), 2026.
 
-![Estado](https://img.shields.io/badge/estado-v0.1.0%20pre--release-yellow)
+![Estado](https://img.shields.io/badge/estado-v0.2.1%20pre--release-yellow)
 ![Tipo](https://img.shields.io/badge/tipo-proyecto%20acad%C3%A9mico-blue)
 ![Vue](https://img.shields.io/badge/Vue-3-42b883?logo=vue.js&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
@@ -57,26 +57,28 @@ flowchart LR
 |---|---|---|
 | Presentación | Vue 3, Vite, Vue Router | `frontend/` |
 | Servicio (API REST) | FastAPI, Uvicorn, Pydantic | `backend/api/` |
-| Inteligencia artificial | YOLO26n exportado a ONNX, ONNX Runtime (CPU) | `backend/ia/` |
-| Datos (opcional) | PostgreSQL, SQLAlchemy, psycopg | `database/` |
+| Inteligencia artificial | YOLO de segmentación (`seg-0.1`) exportado a ONNX, ONNX Runtime (CPU) | `backend/ia/` |
+| Datos | PostgreSQL (migración automática al arrancar), SQLAlchemy, psycopg | `backend/db/`, `database/` |
 | Entrenamiento | Ultralytics en Google Colab, dataset PolypGen | `entrenamiento/` |
-| Despliegue | Docker en Render (API), GitHub Pages (frontend) | `render.yaml` |
+| Despliegue | Railway: API (Docker), frontend y PostgreSQL, desde la rama `main` | `backend/Dockerfile` |
 | Integración continua | GitHub Actions (pytest) | `.github/workflows/` |
 
-**Privacidad:** la API procesa cada imagen en memoria y **no la almacena**. La base de datos, si se configura, solo guarda metadatos anónimos de cada solicitud (formato, tamaño, latencia, número de ROI, modelo o error).
+**Privacidad:** la API procesa cada imagen en memoria y **no la almacena**. La base de datos solo guarda metadatos anónimos de cada solicitud (formato, tamaño, latencia, número de ROI, modelo o error) y las cuentas de usuario, con la contraseña guardada como hash scrypt.
+
+**En línea:** https://colorrectalai-production.up.railway.app
 
 ## Estado de la versión
 
-**v0.1.0 (pre-release).** El flujo completo funciona de punta a punta, pero la versión **no cumple todavía el criterio de salida de QA**. El detalle está en [`pruebas/`](pruebas/).
+**v0.2.1 (pre-release).** Versión publicada en Railway desde `main`. El flujo completo funciona en producción, pero la versión **todavía no cumple el criterio de salida de QA**: quedan dos defectos altos, ambos del modelo y sus datos. El detalle está en [`pruebas/`](pruebas/).
 
 | Módulo | Estado |
 |---|---|
-| Frontend | ✅ Funcional, integrado con la API |
-| API de inferencia | ✅ Funcional (latencia p95 local 0.16 s) |
-| Modelo YOLO | 🟡 Baseline de 10 épocas; calibración (ECE) por mejorar |
-| Base de datos | 🟡 Esquema listo; datos iniciales (`seed`) pendientes |
-| Registro de usuarios | ⏳ Pendiente (el formulario actual es de demostración) |
-| Pruebas QA | 🟡 Primera ronda: 3 de 12 casos *Must* aprobados, defectos registrados |
+| Frontend | ✅ Funcional, integrado con la API; contraste WCAG AA |
+| API de inferencia | ✅ Funcional (latencia p95 local 0.87 s con el modelo de segmentación) |
+| Modelo YOLO | 🟡 Segmentación `seg-0.1` (Release v0.2.0); faltan su cuaderno y sus métricas (Dice, IoU, ECE) |
+| Base de datos | ✅ PostgreSQL en Railway con migración y datos iniciales automáticos |
+| Registro de usuarios | ✅ Registro e inicio de sesión reales; contraseña con hash scrypt |
+| Pruebas QA | 🟡 Ciclo 3: 23 de 32 casos aprobados; 12 de 16 defectos cerrados |
 
 ## Estructura del repositorio
 
