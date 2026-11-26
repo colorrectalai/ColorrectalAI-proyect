@@ -4,7 +4,7 @@
 
 Proyecto académico de la asignatura **Gestión de Proyectos de TI** — Ingeniería de Sistemas, Universidad Santiago de Cali (USC), 2026.
 
-![Estado](https://img.shields.io/badge/estado-v0.2.1%20pre--release-yellow)
+![Estado](https://img.shields.io/badge/estado-v0.2.2%20pre--release-yellow)
 ![Tipo](https://img.shields.io/badge/tipo-proyecto%20acad%C3%A9mico-blue)
 ![Vue](https://img.shields.io/badge/Vue-3-42b883?logo=vue.js&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
@@ -87,7 +87,7 @@ flowchart LR
 
 ## Estado de la versión
 
-**v0.2.1 (pre-release).** Versión publicada en Railway desde `main`. El flujo completo funciona en producción, pero la versión **todavía no cumple el criterio de salida de QA**: quedan dos defectos altos, ambos del modelo y sus datos. El detalle está en [`pruebas/`](pruebas/).
+**v0.2.2 (pre-release).** Versión publicada en Railway desde `main`. El flujo completo funciona en producción, pero la versión **todavía no cumple el criterio de salida de QA**: quedan dos defectos altos, ambos del modelo y sus datos. El detalle está en [`pruebas/`](pruebas/).
 
 | Módulo | Estado |
 |---|---|
@@ -96,7 +96,7 @@ flowchart LR
 | Modelo YOLO | 🟡 Segmentación `seg-0.1` (Release v0.2.0); faltan su cuaderno y sus métricas (Dice, IoU, ECE) |
 | Base de datos | ✅ PostgreSQL en Railway, con migración y datos iniciales automáticos |
 | Registro de usuarios | ✅ Registro e inicio de sesión reales; contraseña con hash scrypt |
-| Pruebas QA | 🟡 Ciclo 3: 23 de 32 casos aprobados, 12 de 16 defectos cerrados, 70 pruebas automáticas (cobertura 93 %) |
+| Pruebas QA | 🟡 Ciclo 3: 23 de 32 casos aprobados, 12 de 16 defectos cerrados · **429 pruebas automatizadas** en el CI (248 backend, 106 frontend, 75 de extremo a extremo en Chrome, Firefox y Edge) |
 
 ## Estructura del repositorio
 
@@ -130,6 +130,14 @@ pip install -r requirements-dev.txt
 cp .env.example .env          # DATABASE_URL y TOKEN_SECRETO para usar la base de datos
 uvicorn api.main:app --reload
 pytest -q                     # con TEST_DATABASE_URL también corren las pruebas de PostgreSQL
+```
+
+Pruebas del frontend:
+
+```sh
+cd frontend
+npm test            # unitarias y de componentes (Vitest)
+npm run test:e2e    # extremo a extremo (Playwright: Chrome, Firefox y Edge)
 ```
 
 Documentación interactiva de la API: <http://localhost:8000/docs>
@@ -227,7 +235,7 @@ La **Matriz de Trazabilidad de Requisitos** vincula cada requisito con su caso d
 - **Ramas:** solo tres ramas permanentes: `develop` (desarrollo) → `qa` (pruebas) → `main` (versiones etiquetadas, la que publica Railway). Todo cambio entra por *pull request* y las ramas de trabajo se borran al fusionarse.
 - **Contribuir:** cada integrante trabaja en `develop` de su *fork* y abre un *pull request* hacia `develop` de este repositorio.
 - **Commits:** formato [Conventional Commits](https://www.conventionalcommits.org/es/) (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`).
-- **Versiones:** cada paso a `main` se etiqueta (`vX.Y.Z`) y el modelo se publica en el Release con su SHA-256. Versión actual: **v0.2.1**.
+- **Versiones:** cada paso a `main` se etiqueta (`vX.Y.Z`) y el modelo se publica en el Release con su SHA-256. Versión actual: **v0.2.2**.
 
 ## Documentación
 
