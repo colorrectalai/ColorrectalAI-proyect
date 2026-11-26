@@ -13,11 +13,11 @@ def _env(nombre: str, defecto, tipo=str):
 @dataclass(frozen=True)
 class Config:
     # --- Modelo ---
-    ruta_modelo: str = field(default_factory=lambda: _env("MODELO_RUTA", "modelos/best.onnx"))
+    ruta_modelo: str = field(default_factory=lambda: _env("MODELO_RUTA", "modelos/best_seg.onnx"))
     # Si el archivo no existe, se descarga de GitHub Releases (URL del asset .onnx).
     url_modelo: str = field(default_factory=lambda: _env("MODELO_URL", ""))
     sha256_modelo: str = field(default_factory=lambda: _env("MODELO_SHA256", "").lower())
-    version_modelo: str = field(default_factory=lambda: _env("MODELO_VERSION", "baseline-0.1"))
+    version_modelo: str = field(default_factory=lambda: _env("MODELO_VERSION", "seg-0.1"))
 
     # --- Inferencia (mismos valores que el Colab) ---
     tamano_img: int = field(default_factory=lambda: _env("TAMANO_IMG", 640, int))
@@ -27,7 +27,9 @@ class Config:
 
     # --- Admisión y validación ---
     max_concurrentes: int = field(default_factory=lambda: _env("MAX_CONCURRENTES", 2, int))
-    max_bytes_imagen: int = field(default_factory=lambda: _env("MAX_MB_IMAGEN", 8, int) * 1024 * 1024)
+    # Segundos que una solicitud espera cupo antes de recibir 503 SIN_CUPO (DEF-09)
+    espera_max_s: float = field(default_factory=lambda: _env("ESPERA_MAX_S", 20, float))
+    max_bytes_imagen: int = field(default_factory=lambda: _env("MAX_MB_IMAGEN", 10, int) * 1024 * 1024)
     max_lado_px: int = field(default_factory=lambda: _env("MAX_LADO_PX", 6000, int))
     formatos_ok: tuple = ("JPEG", "PNG")
 

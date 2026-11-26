@@ -13,8 +13,12 @@ import DetailView from '../views/DetailView.vue'
 // Configuración central: relaciona cada URL con la vista que debe mostrar.
 export default createRouter({
   history: createWebHistory(),
-  // Cada cambio de vista empieza al inicio de la página.
-  scrollBehavior: () => ({ top: 0 }),
+  // Las anclas desplazan hasta la sección; las demás vistas inician arriba.
+  scrollBehavior: (to, from, savedPosition) => {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, behavior: 'smooth' }
+    return { top: 0 }
+  },
   routes: [
     // Zona pública y sus dos pantallas de autenticación independientes.
     { path: '/', name: 'public-home', component: HomeView },

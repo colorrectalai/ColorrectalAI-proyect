@@ -9,18 +9,19 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --navy: #123252;
+  --navy: #02172D;
   --navy-deep: #071e36;
-  --brand: #087fa8;
+  --blue: #0072BA; /* antes #009DFF: 2.9:1 sobre blanco; este cumple WCAG AA (≥ 4.5:1), CP-14 */
+  --brand: var(--blue);
   --brand-bright: #00abf5;
   --brand-soft: #e7f7fc;
   --ink: #18324b;
-  --muted: #62778b;
-  --quiet: #8293a3;
+  --muted: #5d7184;
+  --quiet: #64717d;
   --line: #dce6ee;
   --surface: #fff;
-  --canvas: #f4f7fb;
-  --teal: #168879;
+  --canvas: #f3f8fd;
+  --teal: var(--blue);
   --teal-soft: #e9f6f2;
   --amber: #a76b23;
   --amber-soft: #fff5e8;
@@ -59,7 +60,7 @@ button, a {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .8px;
-  color: #087fb0;
+  color: var(--blue);
   margin: 0 0 8px;
 }
 .page-head {
@@ -92,10 +93,10 @@ button, a {
   justify-content: center;
   gap: 8px;
   border: 1px solid var(--brand);
-  border-radius: 6px;
-  background: var(--brand-bright);
-  color: #062948;
-  font-size: 12px;
+  border-radius: 15px;
+  background: var(--blue);
+  color: #ffffff;
+  font-size: 16px;
   line-height: 1.2;
   font-weight: 700;
   text-decoration: none;

@@ -30,6 +30,7 @@ class AdaptadorYOLO:
         self.sesion = None
         self.entrada = ""
         self.tamano_entrada = 640
+        self.es_segmentacion = False     # True si el .onnx es YOLO-seg (2 salidas: detecciones + prototipos)
 
     @property
     def listo(self) -> bool:
@@ -55,8 +56,16 @@ class AdaptadorYOLO:
         self.entrada = entrada.name
         if isinstance(entrada.shape[2], int):
             self.tamano_entrada = entrada.shape[2]
-        log.info("Modelo cargado: entrada=%s %s", self.entrada, entrada.shape)
+        salidas = self.sesion.get_outputs()
+        self.es_segmentacion = len(salidas) >= 2 and len(salidas[1].shape) == 4
+        log.info("Modelo cargado: entrada=%s %s, tipo=%s", self.entrada, entrada.shape,
+                 "segmentacion" if self.es_segmentacion else "deteccion")
 
     def ejecutar(self, tensor: np.ndarray) -> np.ndarray:
         """Devuelve la salida cruda del modelo (primer tensor de salida)."""
         return self.sesion.run(None, {self.entrada: tensor})[0]
+
+    def ejecutar_seg(self, tensor: np.ndarray):
+        """Modelo de segmentación: devuelve (detecciones (1, 4+nc+32, anclas), prototipos (32, 160, 160))."""
+        salida, protos = self.sesion.run(None, {self.entrada: tensor})[:2]
+        return salida, protos[0]

@@ -2,5 +2,6 @@ __pycache__/
 .venv/
 .env
 *.onnx
+!modelos/best_seg.onnx
 *.pt
 .pytest_cache/

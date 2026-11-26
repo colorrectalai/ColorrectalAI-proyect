@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../components/AuthLayout.vue'
+import { registrarUsuario } from '../api'
+import { guardarSesion } from '../userProfile'
 
 const router = useRouter()
 // Datos escritos por la persona durante la creación de su perfil.
@@ -11,10 +13,11 @@ const password = ref('')
 const confirmPassword = ref('')
 const legalAccepted = ref(false)
 const error = ref('')
+// Evita crear la cuenta dos veces mientras el servidor responde.
+const sending = ref(false)
 
-// Comprueba que los campos estén completos y que las contraseñas coincidan.
-// Cuando pasa la validación, el prototipo continúa al dashboard sin guardar en servidor.
-function submit() {
+// Comprueba los campos y crea la cuenta en el servidor (la contraseña se guarda con hash).
+async function submit() {
   error.value = ''
 
   if (!name.value || !email.value || !password.value || !confirmPassword.value) {
@@ -32,7 +35,25 @@ function submit() {
     return
   }
 
-  router.push('/inicio')
+  if (password.value.length < 8) {
+    error.value = 'La contraseña debe tener al menos 8 caracteres.'
+    return
+  }
+
+  sending.value = true
+  try {
+    guardarSesion(await registrarUsuario({
+      nombre: name.value,
+      correo: email.value,
+      contrasena: password.value,
+      aceptaAviso: legalAccepted.value,
+    }))
+    router.push('/inicio')
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
@@ -115,7 +136,7 @@ function submit() {
       </label>
 
       <!-- Acción principal para crear la cuenta. -->
-      <button class="button" type="submit">Crear mi cuenta <span>→</span></button>
+      <button class="button" type="submit" :disabled="sending">{{ sending ? 'Creando la cuenta…' : 'Crear mi cuenta' }} <span>→</span></button>
     </form>
   </AuthLayout>
 </template>
