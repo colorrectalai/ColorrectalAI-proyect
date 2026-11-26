@@ -1,13 +1,42 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { estado } from '../store'
+import { listarInterpretaciones, restaurarInterpretacion } from '../history'
+import { tonoFondoROI } from '../roiContraste'
 
 // Comparación de la interpretación actual (la que se acaba de analizar o se reabrió del historial).
 const resultados = computed(() => estado.resultados)
+const cargando = ref(false)
+
+// Si se entra directo a /comparacion (o se recarga la página), la interpretación en memoria se
+// pierde: se abre la más reciente del historial local para no mostrar la página vacía.
+onMounted(async () => {
+  if (resultados.value.length) return
+  cargando.value = true
+  try {
+    const [masReciente] = await listarInterpretaciones()
+    if (masReciente) await restaurarInterpretacion(masReciente.id)
+  } catch (e) {
+    console.warn('No se pudo abrir la interpretación más reciente:', e)
+  } finally {
+    cargando.value = false
+  }
+})
 // Primero las imágenes con región detectada, que son las que tienen máscara para comparar.
 const ordenados = computed(() =>
   [...resultados.value].sort((a, b) => (b.respuesta.rois?.length || 0) - (a.respuesta.rois?.length || 0)),
 )
+
+// Borde claro sobre tejido oscuro y oscuro sobre tejido claro (CP-14, ≥ 3:1).
+const tonosROI = reactive({})
+watch(resultados, (lista) => {
+  lista.forEach((resultado) => {
+    ;(resultado.respuesta.rois || []).forEach(async (roi, indice) => {
+      const clave = `${resultado.respuesta.id}:${indice}`
+      if (!(clave in tonosROI)) tonosROI[clave] = await tonoFondoROI(resultado.url, roi)
+    })
+  })
+}, { immediate: true })
 
 const porcentaje = (valor = 0) => `${(valor * 100).toFixed(1)}%`
 // Los tres paneles comparten la proporción de la imagen original: original, máscara y
@@ -30,7 +59,11 @@ const clasificacion = (resultado) =>
     <p class="subhead">Imagen original, máscara de segmentación y superposición de la región, alineadas para cada imagen.</p>
 
     <!-- Sin interpretación activa: se invita a analizar o a abrir una del historial. -->
-    <section v-if="!resultados.length" class="panel compare-empty">
+    <section v-if="cargando" class="panel compare-empty">
+      <h2>Abriendo la interpretación más reciente…</h2>
+    </section>
+
+    <section v-else-if="!resultados.length" class="panel compare-empty">
       <h2>No hay una interpretación para comparar</h2>
       <p>Analiza imágenes o abre una interpretación guardada para ver la comparación.</p>
       <div class="compare-actions">
@@ -74,7 +107,7 @@ const clasificacion = (resultado) =>
             <img :src="resultado.url" alt="" />
             <img v-if="resultado.respuesta.mascara_resultado" class="overlay" :src="resultado.respuesta.mascara_resultado"
                  :alt="`Máscara superpuesta: ${resultado.nombre}`" />
-            <span v-for="(roi, indice) in resultado.respuesta.rois" :key="indice" class="roi" :style="estiloROI(roi)"></span>
+            <span v-for="(roi, indice) in resultado.respuesta.rois" :key="indice" class="roi" :class="{ 'sobre-fondo-oscuro': tonosROI[`${resultado.respuesta.id}:${indice}`] === 'oscuro' }" :style="estiloROI(roi)"></span>
           </div>
           <figcaption>Superposición (máscara y región)</figcaption>
         </figure>
@@ -188,6 +221,10 @@ figure {
   border-radius:6px;
   box-shadow:0 0 0 2px #05c5de;
   pointer-events:none;
+}
+.roi.sobre-fondo-oscuro {
+  border-color:#ffffff;
+  box-shadow:0 0 0 2px #0b1f33;
 }
 figcaption {
   margin-top:6px;

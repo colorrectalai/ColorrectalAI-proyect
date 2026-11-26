@@ -1,9 +1,23 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ArrowRight, FileImage, Images, Info, ScanSearch } from '@lucide/vue'
 import { estado } from '../store'
+import { tonoFondoROI } from '../roiContraste'
 
 const resultados = computed(() => estado.resultados)
+
+// Tono del fondo bajo cada ROI: el borde se vuelve claro sobre tejido oscuro (CP-14, ≥ 3:1).
+const tonosROI = reactive({})
+watch(resultados, (lista) => {
+  lista.forEach((resultado) => {
+    ;(resultado.respuesta.rois || []).forEach(async (roi, indice) => {
+      const clave = `${resultado.respuesta.id}:${indice}`
+      if (!(clave in tonosROI)) tonosROI[clave] = await tonoFondoROI(resultado.url, roi)
+    })
+  })
+}, { immediate: true })
+const claseROI = (resultado, indice) =>
+  ({ 'sobre-fondo-oscuro': tonosROI[`${resultado.respuesta.id}:${indice}`] === 'oscuro' })
 const vista = ref('individual')
 const indiceActual = ref(0)
 const resultadoActual = computed(() => resultados.value[indiceActual.value] || null)
@@ -210,6 +224,7 @@ onBeforeUnmount(cerrarVisor)
                   v-for="(roi, roiIndex) in resultadoActual.respuesta.rois"
                   :key="roiIndex"
                   class="roi-box"
+                  :class="claseROI(resultadoActual, roiIndex)"
                   :style="{ left: porcentaje(roi.x), top: porcentaje(roi.y), width: porcentaje(roi.ancho), height: porcentaje(roi.alto) }"
                 >
                   <span>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</span>
@@ -342,6 +357,7 @@ onBeforeUnmount(cerrarVisor)
                     v-for="(roi, roiIndex) in resultado.respuesta.rois"
                     :key="`galeria-roi-${roiIndex}`"
                     class="general-roi-frame"
+                    :class="claseROI(resultado, roiIndex)"
                     aria-hidden="true"
                     :style="estiloROIEnMiniatura(roi, resultado, 4 / 3)"
                   ><small>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</small></span>
@@ -415,6 +431,7 @@ onBeforeUnmount(cerrarVisor)
                             v-for="(roi, roiIndex) in resultado.respuesta.rois"
                             :key="`tabla-roi-${roiIndex}`"
                             class="general-roi-frame"
+                            :class="claseROI(resultado, roiIndex)"
                             aria-hidden="true"
                             :style="estiloROIEnMiniatura(roi, resultado, 99 / 72)"
                           ><small>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</small></span>
@@ -494,6 +511,7 @@ onBeforeUnmount(cerrarVisor)
                       v-for="(roi, roiIndex) in resultadoActual.respuesta.rois"
                       :key="roiIndex"
                       class="roi-box"
+                      :class="claseROI(resultadoActual, roiIndex)"
                       :style="{ left: porcentaje(roi.x), top: porcentaje(roi.y), width: porcentaje(roi.ancho), height: porcentaje(roi.alto) }"
                     ><span>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</span></div>
                   </template>
@@ -773,6 +791,17 @@ onBeforeUnmount(cerrarVisor)
   border: 2px solid #0b1f33;
   border-radius: 8px;
   box-shadow: 0 0 0 2px #05c5de, 0 0 0 3px rgb(11 31 51 / 55%);
+}
+
+/* Sobre tejido oscuro el borde pasa a blanco y el halo a oscuro. */
+.roi-box.sobre-fondo-oscuro {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #0b1f33, 0 0 0 3px rgb(5 197 222 / 60%);
+}
+
+.general-roi-frame.sobre-fondo-oscuro {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #0b1f33, 0 0 10px rgb(0 197 255 / 45%);
 }
 
 .rejected-files {
