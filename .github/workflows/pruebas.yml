@@ -30,3 +30,30 @@ jobs:
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - run: pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Pruebas unitarias y de componentes (Vitest)
+        run: npm test
+      - name: Navegadores para las pruebas de extremo a extremo
+        run: npx playwright install --with-deps chromium firefox msedge
+      - name: Pruebas de extremo a extremo (Playwright, Chrome, Firefox y Edge)
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resultados-e2e
+          path: |
+            frontend/e2e-resultados.xml
+            frontend/test-results/
