@@ -4,13 +4,17 @@
 const cache = new Map()
 
 // Luminancia relativa WCAG de un píxel sRGB (0–255).
-function luminancia(r, g, b) {
+export function luminancia(r, g, b) {
   const lineal = (c) => {
     const v = c / 255
     return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
   }
   return 0.2126 * lineal(r) + 0.7152 * lineal(g) + 0.0722 * lineal(b)
 }
+
+// Con luminancia ≈ 0.18 el negro y el blanco dan el mismo contraste: ese es el punto de corte.
+export const LUMINANCIA_CORTE = 0.18
+export const tonoPorLuminancia = (l) => (l < LUMINANCIA_CORTE ? 'oscuro' : 'claro')
 
 function cargarImagen(url) {
   return new Promise((resolver, rechazar) => {
@@ -22,7 +26,6 @@ function cargarImagen(url) {
 }
 
 // Devuelve 'oscuro' si el fondo alrededor del borde es oscuro (usar borde claro) o 'claro'.
-// Con luminancia ≈ 0.18 el negro y el blanco dan el mismo contraste: ese es el punto de corte.
 export async function tonoFondoROI(url, roi) {
   const clave = `${url}|${roi.x}|${roi.y}|${roi.ancho}|${roi.alto}`
   if (cache.has(clave)) return cache.get(clave)
@@ -54,7 +57,7 @@ export async function tonoFondoROI(url, roi) {
     }
     if (valores.length) {
       valores.sort((a, b) => a - b)
-      tono = valores[Math.floor(valores.length / 2)] < 0.18 ? 'oscuro' : 'claro'
+      tono = tonoPorLuminancia(valores[Math.floor(valores.length / 2)])
     }
   } catch {
     tono = 'claro'
