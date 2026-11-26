@@ -72,7 +72,9 @@ def cliente_bd(monkeypatch):
     limpio.dispose()
     monkeypatch.setenv("DATABASE_URL", URL_PRUEBAS)
     db.reiniciar()
-    with TestClient(crear_app(Config(), ModeloConSha())) as c:
+    # La misma versión que usa el arranque: evita la carrera entre el registro en segundo plano
+    # (lifespan) y el registro explícito de la prueba.
+    with TestClient(crear_app(Config(version_modelo="prueba-0.1"), ModeloConSha())) as c:
         assert db.preparar(SHA_FALSO, "prueba-0.1")      # el arranque también lo llama; es idempotente
         yield c
     db.reiniciar()
