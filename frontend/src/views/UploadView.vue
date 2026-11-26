@@ -7,6 +7,9 @@ import { estado } from '../store'
 const router = useRouter()
 const isDragging = ref(false)
 
+// Cada vez que se entra a la vista se inicia una carga nueva, incluso si se llega desde el historial.
+estado.archivos = []
+
 // Incorpora archivos JPG o PNG, evita duplicados y limita cada interpretación a diez imágenes.
 const addFiles = (files) => {
   const nuevas = [...files].filter(
@@ -611,5 +614,21 @@ const iniciar = () => router.push('/analizando')
   .analyze-button {
     width: 100%;
   }
+
+  .dropzone { min-height: 300px; }
+  .image-placeholders { transform: scale(.84); margin-block: -8px; }
+  .file-list li { gap: 8px; }
+  .file-name { min-width: 0; overflow-wrap: anywhere; }
+  .file-size { white-space: nowrap; }
+  .remove-file { min-height: 40px; }
+  .tips-intro img { width: 46px; height: 46px; object-fit: contain; }
+}
+
+@media (max-width: 400px) {
+  .upload-card { padding: 10px; }
+  .dropzone { padding-inline: 10px; }
+  .dropzone h2 { font-size: 18px; }
+  .format-note { font-size: 11px; }
+  .tips-list { padding-left: 0; }
 }
 </style>

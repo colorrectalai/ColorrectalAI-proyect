@@ -58,6 +58,8 @@ onMounted(async () => {
     console.error('No se pudo guardar la interpretación en el historial local:', errorGuardar)
     estado.historialError = errorGuardar.message || 'No se pudo guardar la interpretación en este navegador.'
   }
+  // La interpretación ya terminó; deja vacía la selección para la próxima carga.
+  estado.archivos = []
   router.replace('/resultados/' + estado.id)
 })
 </script>
@@ -156,5 +158,11 @@ onMounted(async () => {
 .volver {
   display:inline-block;
   margin-top:18px;
+}
+@media (max-width: 480px) {
+  .progress-dialog { padding: 24px 20px 20px; }
+  .progress-dialog p { font-size: 12px; }
+  .progress-dialog > small { font-size: 11px; }
+  .volver { width: 100%; }
 }
 </style>

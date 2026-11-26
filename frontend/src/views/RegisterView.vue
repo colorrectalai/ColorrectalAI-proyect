@@ -1,16 +1,21 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Eye, EyeOff } from '@lucide/vue'
 import AuthLayout from '../components/AuthLayout.vue'
 import { registrarUsuario } from '../api'
-import { guardarSesion } from '../userProfile'
+import { guardarSesion, guardarTipoUsuario } from '../userProfile'
 
 const router = useRouter()
 // Datos escritos por la persona durante la creación de su perfil.
 const name = ref('')
 const email = ref('')
+const userType = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+// Cada campo de contraseña controla su propia visibilidad.
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 const legalAccepted = ref(false)
 const error = ref('')
 // Evita crear la cuenta dos veces mientras el servidor responde.
@@ -20,7 +25,7 @@ const sending = ref(false)
 async function submit() {
   error.value = ''
 
-  if (!name.value || !email.value || !password.value || !confirmPassword.value) {
+  if (!name.value || !email.value || !userType.value || !password.value || !confirmPassword.value) {
     error.value = 'Completa todos los campos para continuar.'
     return
   }
@@ -48,6 +53,7 @@ async function submit() {
       contrasena: password.value,
       aceptaAviso: legalAccepted.value,
     }))
+    guardarTipoUsuario(userType.value)
     router.push('/inicio')
   } catch (e) {
     error.value = e.message
@@ -97,31 +103,68 @@ async function submit() {
         />
       </label>
 
-      <!-- Contraseña nueva; el navegador solicita al menos ocho caracteres. -->
+      <!-- Tipo de usuario declarado para el perfil académico. -->
       <label class="auth-field">
-        Contraseña
-        <input
-          v-model="password"
-          type="password"
-          autocomplete="new-password"
-          placeholder="Mínimo 8 caracteres"
-          minlength="8"
-          required
-        />
+        Tipo de usuario
+        <select v-model="userType" name="userType" required>
+          <option value="" disabled>Selecciona una opción</option>
+          <option value="Estudiante">Estudiante</option>
+          <option value="Profesional">Profesional</option>
+          <option value="Otro">Otro</option>
+        </select>
       </label>
 
+      <!-- Contraseña nueva; el navegador solicita al menos ocho caracteres. -->
+      <div class="auth-field">
+        <label for="register-password">Contraseña</label>
+        <span class="password-input-wrap">
+          <input
+            id="register-password"
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            autocomplete="new-password"
+            placeholder="Mínimo 8 caracteres"
+            minlength="8"
+            required
+          />
+          <button
+            class="password-visibility-toggle"
+            type="button"
+            :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            :aria-pressed="showPassword"
+            @click="showPassword = !showPassword"
+          >
+            <EyeOff v-if="showPassword" :size="18" aria-hidden="true" />
+            <Eye v-else :size="18" aria-hidden="true" />
+          </button>
+        </span>
+      </div>
+
       <!-- Campo separado que permite comprobar que ambas contraseñas coincidan. -->
-      <label class="auth-field">
-        Confirmar contraseña
-        <input
-          v-model="confirmPassword"
-          type="password"
-          autocomplete="new-password"
-          placeholder="Vuelve a escribir tu contraseña"
-          minlength="8"
-          required
-        />
-      </label>
+      <div class="auth-field">
+        <label for="confirm-password">Confirmar contraseña</label>
+        <span class="password-input-wrap">
+          <input
+            id="confirm-password"
+            v-model="confirmPassword"
+            :type="showConfirmPassword ? 'text' : 'password'"
+            autocomplete="new-password"
+            placeholder="Vuelve a escribir tu contraseña"
+            minlength="8"
+            required
+          />
+          <button
+            class="password-visibility-toggle"
+            type="button"
+            :aria-label="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            :aria-pressed="showConfirmPassword"
+            @click="showConfirmPassword = !showConfirmPassword"
+          >
+            <EyeOff v-if="showConfirmPassword" :size="18" aria-hidden="true" />
+            <Eye v-else :size="18" aria-hidden="true" />
+          </button>
+        </span>
+      </div>
 
       <!-- Mensaje de error si falta algún dato o las contraseñas son distintas. -->
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
@@ -142,6 +185,47 @@ async function submit() {
 </template>
 
 <style scoped>
+/* Agrupa cada contraseña con su botón del ojo dentro del alto existente del campo. */
+.password-input-wrap {
+  position: relative;
+  display: block;
+  margin-top: 8px;
+}
+
+/* Deja espacio para el icono en el extremo derecho del campo. */
+.auth-form :deep(.auth-field .password-input-wrap input) {
+  margin-top: 0;
+  padding-right: 46px;
+}
+
+/* Botón accesible para alternar la visibilidad de cada contraseña. */
+.password-visibility-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.password-visibility-toggle:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.password-visibility-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
 /* El consentimiento se alinea en dos columnas para que el texto no desplace la casilla. */
 .legal-consent {
   display: grid;

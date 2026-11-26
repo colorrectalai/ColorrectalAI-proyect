@@ -111,5 +111,7 @@ import PageHead from '../components/PageHead.vue'
   .side-info dl {
     row-gap:12px;
   }
+  .side-info dd { overflow-wrap: anywhere; }
+  .detail-image .scope-large { height: min(68vw, 270px); min-height: 210px; }
 }
 </style>

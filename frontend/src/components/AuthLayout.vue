@@ -210,7 +210,8 @@ defineProps({
   font-weight: 600;
 }
 
-.auth-panel :deep(.auth-form .auth-field input) {
+.auth-panel :deep(.auth-form .auth-field input),
+.auth-panel :deep(.auth-form .auth-field select) {
   display: block;
   width: 100%;
   height: 50px;
@@ -229,7 +230,24 @@ defineProps({
   color: #97a8b5;
 }
 
+.auth-panel :deep(.auth-form .auth-field select:invalid) {
+  color: #97a8b5;
+}
+
+.auth-panel :deep(.auth-form .auth-field select option) {
+  color: var(--ink);
+}
+
+.auth-panel :deep(.auth-form .auth-field select option[value='']) {
+  color: #97a8b5;
+}
+
 .auth-panel :deep(.auth-form .auth-field input:focus) {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px #087fa81a;
+}
+
+.auth-panel :deep(.auth-form .auth-field select:focus) {
   border-color: var(--brand);
   box-shadow: 0 0 0 3px #087fa81a;
 }
@@ -293,15 +311,15 @@ defineProps({
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 800px) {
   .auth-page {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
   }
 
   .auth-copy {
-    min-height: 390px;
-    padding: 92px 24px 24px;
+    min-height: 350px;
+    padding: 88px 24px 24px;
   }
 
   .auth-logo {
@@ -331,6 +349,8 @@ defineProps({
   }
 
   .auth-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 7px;
   }
 
@@ -341,11 +361,11 @@ defineProps({
   }
 
   .auth-benefits b {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .auth-benefits small {
-    font-size: 8px;
+    font-size: 9px;
   }
 
   .auth-disclaimer {
@@ -353,8 +373,8 @@ defineProps({
   }
 
   .auth-panel {
-    min-height: 540px;
-    padding: 34px 24px 42px;
+    min-height: 0;
+    padding: 32px 24px 38px;
   }
 
   .auth-panel :deep(.auth-form) {
@@ -364,7 +384,18 @@ defineProps({
   }
 }
 
-@media (max-height: 760px) and (min-width: 701px) {
+@media (max-width: 420px) {
+  .auth-copy { min-height: 0; padding: 82px 18px 22px; }
+  .auth-message h2 { font-size: 27px; }
+  .auth-benefits { grid-template-columns: 1fr; }
+  .auth-benefits > div { display: flex; align-items: center; }
+  .auth-panel { padding: 28px 18px 32px; }
+  .auth-panel :deep(.auth-form) { gap: 16px; }
+  .auth-panel :deep(.auth-form .auth-field input),
+  .auth-panel :deep(.auth-form .auth-field select) { height: 48px; }
+}
+
+@media (max-height: 760px) and (min-width: 801px) {
   .auth-panel :deep(.auth-form) {
     min-height: 0;
     justify-content: center;

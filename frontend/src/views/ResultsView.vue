@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { ArrowRight, FileImage, Images, Info, ScanSearch } from '@lucide/vue'
+import { ArrowRight, FileImage, Images, Info, ScanSearch, TriangleAlert } from '@lucide/vue'
 import { estado } from '../store'
 import { tonoFondoROI } from '../roiContraste'
 
@@ -218,6 +218,7 @@ onBeforeUnmount(cerrarVisor)
             @keydown.enter.space.prevent="abrirVisor"
           >
             <figure class="visor-panel">
+              <figcaption><span class="caption-desktop">Imagen con ROI · clic para ampliar</span><span class="caption-compact">ROI · clic para ampliar</span></figcaption>
               <div class="image-frame">
                 <img :src="resultadoActual.url" :alt="`Imagen endoscópica ${indiceActual + 1}`" />
                 <div
@@ -230,14 +231,13 @@ onBeforeUnmount(cerrarVisor)
                   <span>ROI {{ String(roiIndex + 1).padStart(2, '0') }}</span>
                 </div>
               </div>
-                <figcaption>Imagen con ROI · clic para ampliar</figcaption>
             </figure>
 
             <figure v-if="resultadoActual.respuesta.mascara_bn" class="visor-panel">
+              <figcaption><span class="caption-desktop">Máscara de segmentación</span><span class="caption-compact">Máscara de segmentación</span></figcaption>
               <div class="image-frame">
                 <img class="mascara-bn" :src="resultadoActual.respuesta.mascara_bn" alt="Máscara de segmentación en blanco y negro" />
               </div>
-              <figcaption>Máscara de segmentación</figcaption>
             </figure>
           </div>
 
@@ -276,7 +276,10 @@ onBeforeUnmount(cerrarVisor)
           </div>
 
           <div class="finding-banner" :class="{ clear: !tieneHallazgo(resultadoActual) }">
-            <span class="finding-mark" aria-hidden="true">{{ tieneHallazgo(resultadoActual) ? '✓' : '–' }}</span>
+            <span class="finding-mark" aria-hidden="true">
+              <TriangleAlert v-if="tieneHallazgo(resultadoActual)" :size="21" />
+              <span v-else>–</span>
+            </span>
             <div>
               <strong>{{ tieneHallazgo(resultadoActual) ? 'Posible región de interés' : 'Sin hallazgos relevantes' }}</strong>
               <p>{{ tieneHallazgo(resultadoActual) ? 'El modelo señaló una región que requiere revisión visual.' : 'El modelo no señaló una región sospechosa en esta imagen.' }}</p>
@@ -368,6 +371,7 @@ onBeforeUnmount(cerrarVisor)
               <span class="gallery-caption">
                 <strong>{{ resultado.nombre }}</strong>
                 <span :class="['mini-status', { detected: tieneHallazgo(resultado) }]">
+                  <TriangleAlert v-if="tieneHallazgo(resultado)" :size="13" aria-hidden="true" />
                   {{ tieneHallazgo(resultado) ? 'Región señalada' : 'Sin hallazgos' }}
                 </span>
               </span>
@@ -393,7 +397,7 @@ onBeforeUnmount(cerrarVisor)
               <div><small>Regiones de interés</small><strong>{{ totalRegiones }}</strong></div>
             </article>
             <article class="summary-card positive-summary">
-              <span class="summary-icon" aria-hidden="true">✓</span>
+              <span class="summary-icon" aria-hidden="true"><TriangleAlert :size="20" /></span>
               <div><small>Imágenes con regiones</small><strong>{{ imagenesConHallazgos }}</strong></div>
             </article>
             <article class="summary-card">
@@ -415,7 +419,7 @@ onBeforeUnmount(cerrarVisor)
               </thead>
               <tbody>
                 <tr v-for="(resultado, indice) in resultados" :key="resultado.respuesta.id">
-                  <td>
+                  <td data-label="Imagen">
                     <div class="table-image-cell">
                       <span class="table-image-name"><strong>{{ resultado.nombre }}</strong><small>Imagen {{ String(indice + 1).padStart(2, '0') }}</small></span>
                       <span class="table-image-pair">
@@ -441,12 +445,17 @@ onBeforeUnmount(cerrarVisor)
                       </span>
                     </div>
                   </td>
-                  <td><span class="classification-chip" :class="{ neutral: !tieneHallazgo(resultado) }"><ScanSearch aria-hidden="true" />{{ clasificacion(resultado) }}</span></td>
-                  <td>
+                  <td data-label="Clasificación experimental"><span class="classification-chip" :class="{ neutral: !tieneHallazgo(resultado) }"><ScanSearch aria-hidden="true" />{{ clasificacion(resultado) }}</span></td>
+                  <td data-label="Confianza">
                     <div class="table-confidence"><strong>{{ porcentaje(resultado.respuesta.confianza) }}</strong><span class="confidence-track"><span :style="anchoBarra(resultado.respuesta.confianza)"></span></span></div>
                   </td>
-                  <td><span class="detection-status" :class="{ clear: !tieneHallazgo(resultado) }">{{ tieneHallazgo(resultado) ? 'Región señalada' : 'No señalada' }}</span></td>
-                  <td><button class="row-action" type="button" @click="mostrarImagen(indice)">Ver imagen <ArrowRight aria-hidden="true" /></button></td>
+                  <td data-label="Detección">
+                    <span class="detection-status" :class="{ clear: !tieneHallazgo(resultado) }">
+                      <TriangleAlert v-if="tieneHallazgo(resultado)" :size="13" aria-hidden="true" />
+                      {{ tieneHallazgo(resultado) ? 'Región señalada' : 'No señalada' }}
+                    </span>
+                  </td>
+                  <td data-label="Acción"><button class="row-action" type="button" @click="mostrarImagen(indice)">Ver imagen <ArrowRight aria-hidden="true" /></button></td>
                 </tr>
               </tbody>
             </table>
@@ -476,13 +485,13 @@ onBeforeUnmount(cerrarVisor)
 
             <div class="lightbox-tabs" role="tablist" aria-label="Visualización ampliada" @click.stop>
               <button type="button" role="tab" :aria-selected="visualAmpliado === 'roi'" :class="{ active: visualAmpliado === 'roi' }" @click="visualAmpliado = 'roi'">
-                Imagen con ROI
+                <span class="zoom-label-desktop">Imagen con ROI</span><span class="zoom-label-compact">ROI</span>
               </button>
               <button v-if="resultadoActual.respuesta.mascara_resultado" type="button" role="tab" :aria-selected="visualAmpliado === 'superpuesta'" :class="{ active: visualAmpliado === 'superpuesta' }" @click="visualAmpliado = 'superpuesta'">
                 Máscara superpuesta
               </button>
               <button v-if="resultadoActual.respuesta.mascara_bn" type="button" role="tab" :aria-selected="visualAmpliado === 'mascara'" :class="{ active: visualAmpliado === 'mascara' }" @click="visualAmpliado = 'mascara'">
-                Máscara B/N
+                <span class="zoom-label-desktop">Máscara B/N</span><span class="zoom-label-compact">Máscara de segmentación</span>
               </button>
             </div>
 
@@ -527,7 +536,7 @@ onBeforeUnmount(cerrarVisor)
       <!-- Acciones del flujo disponibles después de cualquiera de las dos vistas. -->
       <div class="results-actions">
         <RouterLink class="button secondary" to="/carga">Analizar otras imágenes</RouterLink>
-        <RouterLink class="button" to="/historial">Volver al historial <ArrowRight aria-hidden="true" /></RouterLink>
+        <RouterLink class="button" to="/historial">Ir al historial <ArrowRight aria-hidden="true" /></RouterLink>
       </div>
     </template>
 
@@ -847,6 +856,10 @@ onBeforeUnmount(cerrarVisor)
   line-height: 1.2;
   text-transform: uppercase;
 }
+.visor-panel .image-frame { order:1; }
+.visor-panel figcaption { order:2; }
+.caption-compact,
+.zoom-label-compact { display:none; }
 
 .image-frame > img.mascara-bn {
   border: 1px solid #1f2937;
@@ -993,10 +1006,10 @@ onBeforeUnmount(cerrarVisor)
   align-items: center;
   gap: 14px;
   padding: 15px 17px;
-  border: 1px solid #b9ecdd;
+  border: 1px solid #fecdca;
   border-radius: 11px;
-  background: #e9faf4;
-  color: #155a47;
+  background: #fef2f2;
+  color: #9f1d1d;
 }
 
 .finding-banner.clear {
@@ -1012,7 +1025,7 @@ onBeforeUnmount(cerrarVisor)
   height: 36px;
   place-items: center;
   border-radius: 50%;
-  background: #19c993;
+  background: #dc2626;
   color: #fff;
   font-size: 21px;
   font-weight: 700;
@@ -1288,6 +1301,7 @@ onBeforeUnmount(cerrarVisor)
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   padding: 5px 8px;
   border-radius: 20px;
   background: #e8f5ff;
@@ -1299,8 +1313,9 @@ onBeforeUnmount(cerrarVisor)
 
 .mini-status.detected,
 .detection-status:not(.clear) {
-  background: #e5f8f0;
-  color: #137751;
+  border: 1px solid #f3aaa5;
+  background: #fef2f2;
+  color: #b42318;
 }
 
 /* Visor ampliado sobre un fondo oscuro para comparar la imagen y la máscara. */
@@ -1535,8 +1550,8 @@ onBeforeUnmount(cerrarVisor)
 }
 
 .positive-summary .summary-icon {
-  background: #e3f8ee;
-  color: #159262;
+  background: #fef2f2;
+  color: #b42318;
   font-size: 22px;
   font-weight: 700;
 }
@@ -1841,7 +1856,29 @@ onBeforeUnmount(cerrarVisor)
   .results-page {
     display: block;
     padding-top: 22px;
+    min-width: 0;
+    max-width: 100vw;
+    overflow-x: clip;
   }
+
+  .general-images,
+  .general-results {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .results-table-wrap {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary-card { min-width: 0; gap: 8px; padding: 10px; }
+  .summary-icon { flex: 0 0 34px; width: 34px; height: 34px; }
+  .summary-card small { font-size: 10px; line-height: 1.25; }
+  .summary-card strong { font-size: 17px; }
 
   .results-heading {
     margin-bottom: 12px;
@@ -2007,5 +2044,109 @@ onBeforeUnmount(cerrarVisor)
     grid-template-columns: 65px minmax(45px, 1fr) 48px;
     gap: 8px;
   }
+}
+
+@media (max-width: 850px) {
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .individual-layout { gap: 12px; }
+  .image-stage.con-mascara-bn { grid-template-columns: minmax(0, 1fr); }
+  .image-stage.con-mascara-bn { gap: 18px; }
+  .image-stage.con-mascara-bn .visor-panel { max-height: none; }
+  .visor-panel figcaption { order:0; }
+  .visor-panel .image-frame { order:1; }
+  .visor-panel figcaption { width:100%; padding:2px 4px; }
+  .caption-desktop,.zoom-label-desktop { display:none; }
+  .caption-compact,.zoom-label-compact { display:inline; }
+  .results-table-wrap {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+  .results-table,
+  .results-table tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .results-table thead { display: none; }
+  .results-table tbody { display: grid; gap: 10px; }
+  .results-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+  }
+  .results-table td {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 11px;
+    border: 0;
+    color: var(--ink);
+  }
+  .results-table td + td { border-top: 1px solid #e7edf2; }
+  .results-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .results-table td:first-child,
+  .results-table td:last-child { grid-column: 1 / -1; }
+  .table-image-cell {
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .table-image-name { width: 100%; flex: 0 1 auto; }
+  .table-image-name strong { white-space: normal; overflow-wrap: anywhere; }
+  .table-image-pair { max-width: 100%; flex-wrap: wrap; }
+  .table-confidence { width: 100%; min-width: 0; }
+  .classification-chip { max-width: 100%; white-space: normal; }
+  .detection-status { max-width: 100%; white-space: normal; text-align: center; }
+  .row-action { width: 100%; justify-content: center; }
+  .result-visual-heading { min-width: 0; }
+  .result-visual-heading { align-items:stretch; flex-direction:column; gap:8px; }
+  .current-image-meta {
+    order:-1;
+    align-self: stretch;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 9px 11px;
+    border-radius: 8px;
+    background: #f3f8fc;
+    text-align: left;
+    white-space: normal;
+  }
+  .current-image-meta strong { max-width: 100%; overflow-wrap: anywhere; font-size: 14px; }
+  .image-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+  .view-selector { position: static; }
+  .lightbox-content { width: 100%; }
+  .lightbox-tabs { width: 100%; display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .lightbox-tabs button { min-height: 48px; padding: 6px 4px; border-radius: 12px; font-size: 10px; line-height: 1.2; white-space: normal; }
+  .lightbox-zoom-controls button { min-width: 44px; min-height: 44px; }
+}
+
+@media (max-width: 400px) {
+  .results-page { padding-inline: 10px; }
+  .image-section, .interpretation-section { padding: 12px; }
+  .view-tab { font-size: 12px; }
+  .image-stage { min-height: 200px; }
+  .image-frame > img { max-height: 42vh; }
+  .navigation-button { min-height: 42px; padding-inline: 7px; font-size: 10px; }
+  .results-actions { flex-direction: column; }
+  .results-actions .button { width: 100%; }
+  .gallery-caption { align-items: flex-start; flex-direction: column; gap: 5px; padding: 7px; }
+  .gallery-caption > strong { max-width: 100%; font-size: 10px; }
+  .mini-status { max-width: 100%; padding: 4px 6px; font-size: 9px; white-space: normal; }
 }
 </style>

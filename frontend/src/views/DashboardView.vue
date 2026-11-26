@@ -103,7 +103,6 @@ onUnmounted(() => revealObserver?.disconnect())
           <h2 id="workflow-title">Un recorrido claro, de principio a fin.</h2>
           <p class="section-description">Prepara tus imágenes, revisa las salidas y conserva el contexto de cada interpretación.</p>
         </div>
-        <RouterLink to="/carga" class="row-link">Iniciar interpretación <ArrowRight :size="16" aria-hidden="true" /></RouterLink>
       </div>
 
       <div class="workflow-grid">
@@ -174,6 +173,7 @@ onUnmounted(() => revealObserver?.disconnect())
 .dashboard {
   position: relative;
   isolation: isolate;
+  min-width: 0;
 }
 
 .dashboard::before {
@@ -208,18 +208,16 @@ onUnmounted(() => revealObserver?.disconnect())
     url('/img/FondoTecnologico3.png') center / cover no-repeat;
 }
 
-/* Resplandor azul suave detrás del monitor, sin un aro dominante. */
-.dashboard-welcome::before {
+/* Ilustración de bienvenida visible únicamente en escritorio. */
+.welcome-img {
   position: absolute;
-  top: 50%;
-  right: -40px;
-  z-index: 0;
-  width: 720px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 157, 255, .32) 10%, rgba(0, 157, 255, .18) 42%, rgba(0, 157, 255, .06) 66%, transparent 72%);
-  content: '';
-  transform: translateY(-50%);
+  top: 5%;
+  right: 90px;
+  z-index: 1;
+  width: auto;
+  height: 90%;
+  object-fit: contain;
+  object-position: right center;
   pointer-events: none;
 }
 
@@ -268,17 +266,6 @@ onUnmounted(() => revealObserver?.disconnect())
   padding: 0 19px;
   border-radius: 12px;
   font-size: 15px;
-}
-.welcome-img{
-  position: absolute;
-  top: 5%;
-  right: 90px;
-  z-index: 1;
-  width: auto;
-  height: 90%;
-  object-fit: contain;
-  object-position: right center;
-  pointer-events: none;
 }
 /* Métricas con más aire, iconografía consistente y texto legible. */
 .dashboard-stats {
@@ -357,7 +344,10 @@ onUnmounted(() => revealObserver?.disconnect())
 
 .dashboard-data {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 30px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .workflow-section .dashboard-section-head {
@@ -456,6 +446,9 @@ onUnmounted(() => revealObserver?.disconnect())
 }
 
 .activity-panel {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(15, 51, 78, .045);
@@ -465,22 +458,6 @@ onUnmounted(() => revealObserver?.disconnect())
   margin: 12px 16px 0;
   color: #8d3b2e;
   font-size: 13px;
-}
-
-/* La actividad conserva la tabla del historial con un tamaño legible. */
-.activity-panel :deep(.history-table th) {
-  padding: 14px 15px;
-  color: #526b80;
-  font-size: 11px;
-}
-
-.activity-panel :deep(.history-table td) {
-  padding: 14px 15px;
-  font-size: 12px;
-}
-
-.activity-panel :deep(.history-table td small) {
-  font-size: 11px;
 }
 
 /* Nota de alcance en formato compacto, con icono alineado al texto. */
@@ -517,16 +494,7 @@ onUnmounted(() => revealObserver?.disconnect())
   .dashboard-welcome {
     height: 350px;
   }
-
-  .welcome-img {
-    max-width: 54%;
-    right: 30px;
-  }
-
-  .dashboard-welcome::before {
-    right: 6%;
-    width: 300px;
-  }
+  .welcome-img { display: none; }
 }
 
 @media (max-width: 620px) {
@@ -547,19 +515,6 @@ onUnmounted(() => revealObserver?.disconnect())
 
   .welcome-description {
     font-size: 14px;
-  }
-
-  .welcome-img {
-    max-width: 100%;
-    opacity: .22;
-    right: 0;
-    -webkit-mask-image: linear-gradient(to left, #000 12%, transparent 100%);
-    mask-image: linear-gradient(to left, #000 12%, transparent 100%);
-  }
-
-  .dashboard-welcome::before {
-    right: -70px;
-    width: 230px;
   }
 
   .dashboard-stats {
@@ -630,6 +585,16 @@ onUnmounted(() => revealObserver?.disconnect())
   .workflow-card {
     min-height: 0;
   }
+}
+
+@media (max-width: 620px) {
+  .dashboard-welcome { min-height: 360px; height: auto; }
+  .welcome-copy { position: relative; z-index: 2; max-width: 100%; margin-left: 0; }
+  .workflow-card h3 { font-size: 16px; }
+  .workflow-card p { font-size: 13px; line-height: 1.5; }
+  .dashboard-section-head { width: 100%; min-width: 0; }
+  .activity-section, .activity-panel { width: 100%; min-width: 0; max-width: 100%; }
+  .activity-panel :deep(.history-table-scroll) { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

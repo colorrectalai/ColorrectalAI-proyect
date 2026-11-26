@@ -559,5 +559,17 @@ const descargarInforme = async (item) => {
     width: 100%;
     flex-wrap: wrap;
   }
+  .sort-control { margin-left: 0; }
+  .history-error { margin-inline: 12px; overflow-wrap: anywhere; }
+}
+
+@media (max-width: 400px) {
+  .history-stat { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; padding: 10px; }
+  .stat-icon { width: 38px; height: 38px; }
+  .stat-number { font-size: 25px; }
+  .history-toolbar { padding: 10px; }
+  .date-control { gap: 7px; }
+  .date-control select { min-width: 0; }
+  .history-pagination > span { overflow-wrap: anywhere; }
 }
 </style>

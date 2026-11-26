@@ -236,5 +236,9 @@ figcaption {
   .compare-grid {
     grid-template-columns:1fr;
   }
+  .compare-card .scope-large {
+    height:min(68vw,300px);
+    min-height:220px;
+  }
 }
 </style>

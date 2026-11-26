@@ -121,7 +121,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.history-table-scroll { overflow-x: auto; }
+.history-table-scroll { overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
 .history-table { width: 100%; min-width: 1000px; border-collapse: collapse; text-align: left; }
 .history-table th { padding: 14px 16px; background: #eaf5fd; color: var(--navy); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .history-table td { height: 78px; padding: 11px 16px; border-bottom: 1px solid #e4edf3; color: var(--ink); font-size: 13px; vertical-align: middle; }
@@ -155,4 +155,9 @@ onUnmounted(() => {
 .empty-cell strong { margin-bottom: 5px; font-size: 16px !important; }
 .empty-cell > span { color: var(--muted); }
 .empty-cell .button { display: flex; width: fit-content; margin: 16px auto 0; font-size: 13px; }
+@media (max-width: 700px) {
+  .history-table { min-width: 900px; }
+  .history-table th, .history-table td { padding-inline: 12px; }
+  .open-button, .download-button { min-height: 44px; }
+}
 </style>

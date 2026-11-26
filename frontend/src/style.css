@@ -11,13 +11,13 @@
   -webkit-font-smoothing: antialiased;
   --navy: #02172D;
   --navy-deep: #071e36;
-  --blue: #0072BA; /* antes #009DFF: 2.9:1 sobre blanco; este cumple WCAG AA (≥ 4.5:1), CP-14 */
+  --blue: #009DFF;
   --brand: var(--blue);
   --brand-bright: #00abf5;
   --brand-soft: #e7f7fc;
   --ink: #18324b;
-  --muted: #5d7184;
-  --quiet: #64717d;
+  --muted: #62778b;
+  --quiet: #8293a3;
   --line: #dce6ee;
   --surface: #fff;
   --canvas: #f3f8fd;
@@ -34,8 +34,11 @@
 }
 body {
   margin: 0;
-  min-width: 360px;
+  min-width: 320px;
   background: var(--canvas);
+}
+img, svg, video, canvas {
+  max-width: 100%;
 }
 button, input, select {
   font: inherit;
@@ -257,5 +260,8 @@ button, a {
   }
   .stats article {
     min-height: 77px;
+  }
+  .button {
+    min-height: 46px;
   }
 }

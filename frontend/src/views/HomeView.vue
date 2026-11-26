@@ -10,7 +10,7 @@
           <h1>Explora imágenes de colonoscopia con una <span class="perspectiva">nueva perspectiva.</span></h1>
           <p>Una plataforma académica para revisar imágenes, visualizar regiones de interés y consultar resultados experimentales.</p>
           <div class="hero-actions">
-            <RouterLink class="button" to="/registro">Iniciar interpretacion <ArrowRight /></RouterLink>
+            <RouterLink class="button" :to="interpretationPath">Iniciar interpretación <ArrowRight /></RouterLink>
             <RouterLink class="hero-secondary" to="/#acerca">Conocer el proyecto<ArrowDown /></RouterLink>
           </div>
           <ul class="hero-features" aria-label="Características de ColorrectalAI">
@@ -58,6 +58,7 @@
         <div class="cancer-copy">
           <h2 id="cancer-title">Conociendo el cáncer colorrectal</h2>
           <p>El cáncer colorrectal es el tercer tipo de cáncer más común y la segunda causa de muerte relacionada con cáncer en el mundo. Afecta el colon o el recto y es más frecuente después de los 50 años, aunque también puede presentarse en personas más jóvenes. La detección temprana mejora las posibilidades de tratamiento.</p>
+          <img class="cancer-image cancer-image-responsive" src="https://magazine.medlineplus.gov/images/uploads/main_images/ColorectalCancer.jpg" alt="Imagen informativa sobre el cáncer colorrectal, publicada por MedlinePlus Magazine" loading="lazy" />
           <h3>Síntomas habituales</h3>
           <ul class="symptom-list">
             <li v-for="symptom in symptoms" :key="symptom">{{ symptom }}</li>
@@ -66,7 +67,7 @@
           <a class=" hero-secondary more-info-link" href="https://www.who.int/news-room/fact-sheets/detail/colorectal-cancer" target="_blank" rel="noopener noreferrer">Más información <span aria-hidden="true">→</span></a>
         </div>
 
-        <img class="cancer-image" src="https://magazine.medlineplus.gov/images/uploads/main_images/ColorectalCancer.jpg" alt="Imagen informativa sobre el cáncer colorrectal, publicada por MedlinePlus Magazine" loading="lazy" />
+        <img class="cancer-image cancer-image-desktop" src="https://magazine.medlineplus.gov/images/uploads/main_images/ColorectalCancer.jpg" alt="Imagen informativa sobre el cáncer colorrectal, publicada por MedlinePlus Magazine" loading="lazy" />
       </div>
     </section>
 
@@ -142,12 +143,16 @@
 
 <script setup>
 // Reutiliza la marca compartida y mantiene en datos los textos repetidos de estas secciones.
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import BrandLogo from '../components/BrandLogo.vue'
 import { ArrowRight, ArrowDown } from '@lucide/vue'
 import { workflowSteps } from '../data/workflowSteps'
+import { sesionActiva } from '../userProfile'
 
 let sectionRevealObserver
+const interpretationPath = computed(() =>
+  sesionActiva.value ? '/carga' : '/acceso',
+)
 
 onMounted(() => {
   const sections = document.querySelectorAll('.public-home > section, .public-home > footer')
@@ -408,6 +413,7 @@ const resultLimits = [
   border-radius: 12px;
   margin-left: 70px;
 }
+.cancer-image-responsive { display: none; }
 
 .section-eyebrow {
   margin: 0 0 9px;
@@ -816,5 +822,74 @@ const resultLimits = [
     width: 36px;
     height: 36px;
   }
+}
+
+/* En móvil, las secciones informativas usan el ancho disponible sin desplazamientos laterales. */
+@media (max-width: 850px) {
+  .cancer-inner { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .cancer-copy { padding-left: 0; }
+  .cancer-image-desktop { display: none; }
+  .cancer-image-responsive {
+    display: block;
+    width: min(62%, 260px);
+    max-width: 100%;
+    max-height: 210px;
+    margin: 18px auto 8px;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    object-position: center;
+  }
+  .hero-features {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+  }
+  .hero-feature {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    text-align: center;
+  }
+  .project-band {
+    display: grid;
+    grid-template-columns: minmax(180px, .72fr) minmax(0, 1.28fr);
+    align-items: center;
+    gap: 24px;
+    height: auto;
+    min-height: 280px;
+    padding: 32px 0;
+  }
+  .big-logo { position: relative; display: block; width: min(230px, 100%); height: auto; margin: 0 auto; }
+  .project-inner { width: 100%; height: auto; margin: 0; }
+  .exploration-grid { height: auto; grid-auto-rows: 1fr; }
+}
+@media (max-width: 620px) {
+  .public-home { padding-top: 0; }
+  .home-hero { min-height: 0; }
+  .home-hero-image { display: none; }
+  .home-copy { width: 100%; max-width: 100%; padding: 24px 0 0; }
+  .home-copy h1 { font-size: clamp(32px, 9vw, 40px); letter-spacing: -1px; }
+  .home-copy > p:not(.hero-note) { max-width: 38ch; font-size: 16px; line-height: 1.55; }
+  .hero-actions { align-items: stretch; flex-direction: column; gap: 10px; }
+  .hero-actions > * { width: 100%; justify-content: center; }
+  .hero-features { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .hero-feature { font-size: 12px; }
+  .cancer-inner, .limits-inner { grid-template-columns: minmax(0, 1fr); }
+  .project-band { grid-template-columns: minmax(0, 1fr); min-height: 0; gap: 12px; padding: 28px 0 32px; }
+  .big-logo { width: min(190px, 56vw); margin-bottom: 4px; }
+  .project-inner { width: calc(100% - 30px); margin-inline: auto; text-align: left; }
+  .cancer-image-responsive { width: min(68%, 245px); max-height: 185px; margin: 14px auto 6px; }
+  .cancer-copy h2, .project-copy h2, .exploration-heading h2, .limits-intro h2 { font-size: 25px; }
+  .cancer-copy > p:not(.section-eyebrow):not(.symptom-note), .project-copy > p:last-child { font-size: 15px; }
+  .symptom-list { font-size: 14px; }
+  .exploration-grid { height: auto; grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; gap: 12px; padding-top: 14px; }
+  .exploration-card { min-height: 0; height: auto; padding: 16px; }
+  .exploration-card > p { font-size: 14px; }
+  .limits-list { min-width: 0; }
+  .start-heading .button { width: 100%; }
+  .academic-notice { font-size: 12px; }
 }
 </style>

@@ -1,16 +1,15 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, ChevronUp, CircleHelp, History, House, LogIn, LogOut, PanelsTopLeft, ScanSearch, UserRoundPlus } from '@lucide/vue'
-import { haySesion, limpiarPerfilActivo } from '../userProfile'
+import { ArrowRightFromLine, ChevronDown, ChevronUp, CircleHelp, History, House, Info, LogIn, LogOut, ScanSearch, UserRoundPlus } from '@lucide/vue'
+import { haySesion, limpiarPerfilActivo, sesionActiva } from '../userProfile'
 
 const route = useRoute()
 const router = useRouter()
-// Solo muestra la navegación privada cuando hay una sesión con token vigente.
-// La ruta es una dependencia reactiva para actualizarla al entrar o cerrar sesión.
+// La ruta vuelve a validar el token y el estado reactivo permite cerrar la sesión al instante.
 const loggedInView = computed(() => {
   route.path
-  return haySesion()
+  return sesionActiva.value && haySesion()
 })
 // Nombre guardado durante el registro; la ruta reactiva actualiza el dato al iniciar sesión.
 const accountName = computed(() => {
@@ -27,6 +26,7 @@ const accountInitials = computed(() => {
 })
 const profileMenuOpen = ref(false)
 const profileMenu = ref(null)
+const navigationOpen = ref(false)
 
 function closeProfileMenuOnOutsideClick(event) {
   if (!profileMenu.value?.contains(event.target)) profileMenuOpen.value = false
@@ -55,59 +55,96 @@ onUnmounted(() => {
 })
 </script>
 <template>
-  <!-- Encabezado general; el logo vuelve al inicio apropiado para cada área. -->
-  <header class="topbar" :class="{ 'is-scrolled': isScrolled }">
-    <RouterLink class="brand" to="/" aria-label="ColorrectalAI, ir al inicio">
-      <img src="/img/LogoColorrectalAI2.png" alt="ColorrectalAI" />
-    </RouterLink>
-    <!-- Navegación para las vistas internas de la aplicación. -->
-    <nav v-if="loggedInView" aria-label="Navegación principal">
-      <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }"><House :size="17" aria-hidden="true" /><span>Inicio</span></RouterLink>
-      <RouterLink
-        to="/carga"
-        :class="{ active: ['/carga', '/analizando', '/resultados', '/comparacion'].some(path => route.path.startsWith(path)) }"
-      ><ScanSearch :size="17" aria-hidden="true" /><span>Interpretación</span></RouterLink>
-      <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }"><History :size="17" aria-hidden="true" /><span>Historial</span></RouterLink>
-    </nav>
-    <!-- Enlaces públicos para conocer el proyecto, acceder o crear una cuenta. -->
-    <nav v-else aria-label="Navegación principal">
-      <RouterLink to="/#acerca"><CircleHelp :size="17" aria-hidden="true" /><span>Acerca de</span></RouterLink>
-      <RouterLink to="/acceso"><LogIn :size="17" aria-hidden="true" /><span>Iniciar sesión</span></RouterLink>
-      <RouterLink class="button" to="/registro"><UserRoundPlus :size="17" aria-hidden="true" /><span>Crear cuenta</span></RouterLink>
-    </nav>
-    <!-- Perfil desplegable con opción para cerrar la sesión de demostración. -->
-    <div v-if="loggedInView" ref="profileMenu" class="profile-menu" @keydown.esc.stop="profileMenuOpen = false">
-      <button
-        class="account"
-        type="button"
-        aria-controls="profile-dropdown"
-        :aria-expanded="profileMenuOpen"
-        aria-haspopup="true"
-        @click="profileMenuOpen = !profileMenuOpen"
-      >
-        <span class="avatar">{{ accountInitials }}</span>
-        <span class="account-name">{{ accountLabel }}</span>
-        <ChevronUp v-if="profileMenuOpen" class="account-chevron" :size="16" :stroke-width="2" aria-hidden="true" />
-        <ChevronDown v-else class="account-chevron" :size="16" :stroke-width="2" aria-hidden="true" />
-      </button>
-      <Transition name="profile-menu">
-        <div v-if="profileMenuOpen" id="profile-dropdown" class="profile-dropdown">
-          <div class="profile-identity">
-            <span class="profile-menu-label">Sesión iniciada como</span>
-            <strong>{{ accountName }}</strong>
+  <div class="navigation-shell" @keydown.esc.window="navigationOpen = false; profileMenuOpen = false">
+    <!-- Encabezado fijo en flujo para mostrar la marca y el perfil. -->
+    <header class="topbar" :class="{ 'is-scrolled': isScrolled }">
+      <RouterLink class="brand" to="/" aria-label="ColorrectalAI, ir al inicio">
+        <img src="/img/LogoColorrectalAI2.png" alt="ColorrectalAI" />
+      </RouterLink>
+      <!-- En escritorio se conserva la navegación horizontal original. -->
+      <nav v-if="loggedInView" aria-label="Navegación principal">
+        <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }"><House :size="17" aria-hidden="true" /><span>Inicio</span></RouterLink>
+        <RouterLink to="/carga" :class="{ active: ['/carga', '/analizando', '/resultados', '/comparacion'].some(path => route.path.startsWith(path)) }"><ScanSearch :size="17" aria-hidden="true" /><span>Interpretación</span></RouterLink>
+        <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }"><History :size="17" aria-hidden="true" /><span>Historial</span></RouterLink>
+      </nav>
+      <nav v-else aria-label="Navegación principal">
+        <RouterLink to="/#acerca"><CircleHelp :size="17" aria-hidden="true" /><span>Acerca de</span></RouterLink>
+        <RouterLink to="/acceso"><LogIn :size="17" aria-hidden="true" /><span>Iniciar sesión</span></RouterLink>
+        <RouterLink class="button" to="/registro"><UserRoundPlus :size="17" aria-hidden="true" /><span>Crear cuenta</span></RouterLink>
+      </nav>
+      <!-- Perfil desplegable con opción para cerrar la sesión de demostración. -->
+      <div v-if="loggedInView" ref="profileMenu" class="profile-menu" @keydown.esc.stop="profileMenuOpen = false">
+        <button
+          class="account"
+          type="button"
+          aria-controls="profile-dropdown"
+          :aria-expanded="profileMenuOpen"
+          aria-haspopup="true"
+          @click="profileMenuOpen = !profileMenuOpen"
+        >
+          <span class="avatar">{{ accountInitials }}</span>
+          <span class="account-name">{{ accountLabel }}</span>
+          <ChevronUp v-if="profileMenuOpen" class="account-chevron" :size="16" :stroke-width="2" aria-hidden="true" />
+          <ChevronDown v-else class="account-chevron" :size="16" :stroke-width="2" aria-hidden="true" />
+        </button>
+        <Transition name="profile-menu">
+          <div v-if="profileMenuOpen" id="profile-dropdown" class="profile-dropdown">
+            <div class="profile-identity">
+              <span class="profile-menu-label">Sesión iniciada como</span>
+              <strong>{{ accountName }}</strong>
+            </div>
+            <button class="logout-action" type="button" @click="logout">
+              <LogOut :size="17" :stroke-width="1.8" aria-hidden="true" />
+              Cerrar sesión
+            </button>
           </div>
-          <button class="logout-action" type="button" @click="logout">
-            <LogOut :size="17" :stroke-width="1.8" aria-hidden="true" />
-            Cerrar sesión
-          </button>
-        </div>
-      </Transition>
-    </div>
-  </header>
+        </Transition>
+      </div>
+    </header>
+
+    <!-- Pestaña fija a mitad del borde izquierdo que abre el menú lateral. -->
+    <button
+      class="nav-drawer-toggle"
+      type="button"
+      aria-controls="primary-navigation"
+      :aria-expanded="navigationOpen"
+      :aria-label="navigationOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'"
+      @click="navigationOpen = !navigationOpen"
+    >
+      <ArrowRightFromLine class="nav-drawer-icon" :size="17" aria-hidden="true" />
+      <span>Menú</span>
+    </button>
+
+    <!-- Fondo superpuesto y panel vertical de navegación. -->
+    <Transition name="navigation-drawer">
+      <div v-if="navigationOpen" class="drawer-backdrop" @click.self="navigationOpen = false">
+        <nav id="primary-navigation" class="drawer-panel" aria-label="Navegación principal">
+          <div class="drawer-heading">
+            <img src="/img/Logotipo.png" alt="" aria-hidden="true" />
+            <span>ColorrectalAI</span>
+          </div>
+
+          <div v-if="loggedInView" class="drawer-links">
+            <RouterLink to="/" :class="{ active: route.path === '/' }" @click="navigationOpen = false"><Info :size="19" aria-hidden="true" /><span>ColorrectalAI</span></RouterLink>
+            <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }" @click="navigationOpen = false"><House :size="19" aria-hidden="true" /><span>Inicio</span></RouterLink>
+            <RouterLink to="/carga" :class="{ active: ['/carga', '/analizando', '/resultados', '/comparacion'].some(path => route.path.startsWith(path)) }" @click="navigationOpen = false"><ScanSearch :size="19" aria-hidden="true" /><span>Interpretación</span></RouterLink>
+            <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }" @click="navigationOpen = false"><History :size="19" aria-hidden="true" /><span>Historial</span></RouterLink>
+          </div>
+
+          <div v-else class="drawer-links">
+            <RouterLink to="/#acerca" @click="navigationOpen = false"><Info :size="19" aria-hidden="true" /><span>Acerca de</span></RouterLink>
+            <RouterLink to="/acceso" @click="navigationOpen = false"><LogIn :size="19" aria-hidden="true" /><span>Iniciar sesión</span></RouterLink>
+            <RouterLink to="/registro" @click="navigationOpen = false"><UserRoundPlus :size="19" aria-hidden="true" /><span>Crear cuenta</span></RouterLink>
+          </div>
+        </nav>
+      </div>
+    </Transition>
+  </div>
 </template>
 
 <style scoped>
 /* Fondo, altura y alineación del encabezado compartido. */
+.navigation-shell { position: relative; }
 .topbar {
   position: sticky;
   top: 0;
@@ -161,17 +198,109 @@ onUnmounted(() => {
   transition:background .15s ease,color .15s ease;
   white-space:nowrap;
 }
-.topbar nav a svg {
-  flex:0 0 auto;
-  color:var(--canvas);
-}
+.topbar nav a svg { flex:0 0 auto; color:var(--canvas); }
 .topbar nav a:not(.button):hover,
 .topbar nav a.active:not(.button) {
-  /* estilos de hover y activo para los enlaces normales */
   background:#12395b;
   color:#ffffff;
-  text-decoration:none;
 }
+.nav-drawer-toggle {
+  position:fixed;
+  top:50%;
+  left:0;
+  z-index:1303;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  width:44px;
+  height:78px;
+  padding:8px 4px;
+  border:1px solid rgb(255 255 255 / 28%);
+  border-left:0;
+  border-radius:0 14px 14px 0;
+  background:var(--navy);
+  color:#fff;
+  font-size:10px;
+  font-weight:500;
+  line-height:1;
+  box-shadow:0 6px 20px rgb(2 23 45 / 24%);
+  cursor:pointer;
+  transform:translateY(-50%);
+  transition:left .24s ease, transform .24s ease, background-color .16s ease;
+}
+.nav-drawer-toggle:hover { background:#07345a; }
+.nav-drawer-toggle[aria-expanded='true'] {
+  left:min(280px, 72vw);
+  border-left:1px solid rgb(255 255 255 / 28%);
+  border-right:0;
+  border-radius:14px 0 0 14px;
+  transform:translateY(-50%);
+}
+.nav-drawer-toggle[aria-expanded='true'] .nav-drawer-icon { transform:rotate(180deg); }
+.nav-drawer-icon { transition:transform .2s ease; }
+.drawer-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:1301;
+  background:rgb(2 15 29 / 58%);
+  backdrop-filter:blur(3px);
+}
+.drawer-panel {
+  position:absolute;
+  inset:0 auto 0 0;
+  display:flex;
+  width:min(280px, 72vw);
+  flex-direction:column;
+  gap:34px;
+  padding:34px 20px;
+  border-right:1px solid rgb(255 255 255 / 12%);
+  background:linear-gradient(160deg, #08223b 0%, var(--navy) 72%);
+  box-shadow:16px 0 44px rgb(0 0 0 / 22%);
+}
+.drawer-heading {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:54px;
+  padding:0 8px 20px;
+  border-bottom:1px solid rgb(255 255 255 / 14%);
+  color:#fff;
+  font-size:18px;
+  font-weight:700;
+}
+.drawer-heading img { width:42px; height:42px; object-fit:contain; }
+.drawer-links { display:flex; flex-direction:column; gap:8px; }
+.drawer-links a {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  min-height:54px;
+  padding:0 14px;
+  border:1px solid transparent;
+  border-radius:12px;
+  color:#e8f4ff;
+  font-size:15px;
+  font-weight:500;
+  text-decoration:none;
+  transition:background-color .16s ease, border-color .16s ease, color .16s ease;
+}
+.drawer-links a:hover,
+.drawer-links a.active {
+  border-color:rgb(0 157 255 / 32%);
+  background:rgb(0 157 255 / 16%);
+  color:#fff;
+}
+.drawer-links a svg { flex:0 0 auto; color:#45c4ff; }
+.navigation-drawer-enter-active,
+.navigation-drawer-leave-active { transition:opacity .22s ease; }
+.navigation-drawer-enter-active .drawer-panel,
+.navigation-drawer-leave-active .drawer-panel { transition:transform .24s cubic-bezier(.2,.7,.2,1); }
+.navigation-drawer-enter-from,
+.navigation-drawer-leave-to { opacity:0; }
+.navigation-drawer-enter-from .drawer-panel,
+.navigation-drawer-leave-to .drawer-panel { transform:translateX(-100%); }
 
 .account {
   display:flex;
@@ -279,60 +408,27 @@ onUnmounted(() => {
     padding:0 22px;
     gap:10px;
   }
-  .topbar nav {
-    gap:2px;
-  }
-  .topbar nav a {
-    padding:8px;
-    font-size:12px;
-  }
   .brand img {
     height:60px;
   }
+  .topbar nav { display:none; }
+  .nav-drawer-toggle { display:flex; }
 }
 @media(max-width:620px) {
   .topbar {
-    display:grid;
-    grid-template-columns:minmax(0, 1fr) auto;
-    height:auto;
-    min-height:64px;
+    display:flex;
+    height:64px;
     padding:0 14px;
-    gap:2px 8px;
-  }
-  .brand {
-    grid-column:1;
-    grid-row:1;
+    gap:8px;
+    justify-content:space-between;
   }
   .brand img {
     height:56px;
     max-width:220px;
   }
-  .profile-menu {
-    grid-column:2;
-    grid-row:1;
-  }
-  .topbar nav {
-    grid-column:1 / -1;
-    grid-row:2;
-    justify-content:space-between;
-    overflow-x:auto;
-    width:100%;
-    margin:0;
-    scrollbar-width:none;
-  }
-  .topbar nav::-webkit-scrollbar {
-    display:none;
-  }
-  .topbar nav a {
-    gap:5px;
-    padding:8px 5px;
-    font-size:10px;
-  }
-  .topbar nav a svg {
-    width:14px;
-    height:14px;
-  }
+  .brand { min-width:0; }
   .account {
+    min-height:44px;
     padding:4px;
   }
   .profile-menu {
@@ -341,9 +437,19 @@ onUnmounted(() => {
   .account>span:not(.avatar) {
     display:none;
   }
+  .drawer-panel { width:min(250px, 72vw); padding:26px 14px; }
+  .nav-drawer-toggle[aria-expanded='true'] { left:min(250px, 72vw); }
+}
+@media (min-width:851px) {
+  .drawer-backdrop { display:none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .topbar,
+  .nav-drawer-toggle,
+  .navigation-drawer-enter-active,
+  .navigation-drawer-leave-active,
+  .navigation-drawer-enter-active .drawer-panel,
+  .navigation-drawer-leave-active .drawer-panel,
   .account,
   .profile-menu-enter-active,
   .profile-menu-leave-active {

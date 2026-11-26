@@ -1,7 +1,13 @@
-// Sesión del usuario en el navegador. La cuenta vive en el servidor (PostgreSQL, contraseña con hash);
-// aquí solo se guardan el token de sesión, el correo y el nombre para el saludo. Nunca la contraseña.
+import { ref } from 'vue'
+
+// La cuenta y su contraseña viven en el servidor; el navegador conserva solo el token y datos de presentación.
 const CLAVE_TOKEN = 'colorrectalai-token'
 const CLAVE_VENCE = 'colorrectalai-token-vence'
+const CLAVE_SESION = 'colorrectalai-session'
+const venceInicial = Number(localStorage.getItem(CLAVE_VENCE) || 0)
+
+// Estado reactivo compartido para cambiar la navegación al iniciar o cerrar sesión.
+export const sesionActiva = ref(Boolean(localStorage.getItem(CLAVE_TOKEN) && Date.now() < venceInicial))
 
 // Guarda la sesión que devuelve la API al registrarse o iniciar sesión.
 export function guardarSesion(sesion) {
@@ -9,7 +15,13 @@ export function guardarSesion(sesion) {
   localStorage.setItem(CLAVE_VENCE, String(Date.now() + sesion.expira_en_s * 1000))
   localStorage.setItem('colorrectalai-user-email', sesion.usuario.correo)
   localStorage.setItem('colorrectalai-user-name', sesion.usuario.nombre)
-  localStorage.setItem('colorrectalai-session', 'active')
+  localStorage.setItem(CLAVE_SESION, 'active')
+  sesionActiva.value = true
+}
+
+// Conserva el tipo seleccionado en el perfil local mientras la API no lo incluya en su contrato.
+export function guardarTipoUsuario(tipoUsuario) {
+  if (tipoUsuario) localStorage.setItem('colorrectalai-user-type', tipoUsuario)
 }
 
 // Token vigente o null si no hay sesión o ya venció.
@@ -22,8 +34,12 @@ export function tokenActual() {
 
 // Hay sesión solo si el token sigue vigente; si venció, se limpia el perfil.
 export function haySesion() {
-  if (tokenActual()) return true
-  if (localStorage.getItem('colorrectalai-session')) limpiarPerfilActivo()
+  if (tokenActual()) {
+    sesionActiva.value = true
+    return true
+  }
+  if (localStorage.getItem(CLAVE_SESION)) limpiarPerfilActivo()
+  sesionActiva.value = false
   return false
 }
 
@@ -33,8 +49,7 @@ export function limpiarPerfilActivo() {
   localStorage.removeItem(CLAVE_VENCE)
   localStorage.removeItem('colorrectalai-user-email')
   localStorage.removeItem('colorrectalai-user-name')
-  localStorage.removeItem('colorrectalai-session')
+  localStorage.removeItem('colorrectalai-user-type')
+  localStorage.removeItem(CLAVE_SESION)
+  sesionActiva.value = false
 }
-
-// Borra el directorio de perfiles que guardaba la versión de demostración anterior.
-localStorage.removeItem('colorrectalai-user-profiles')
