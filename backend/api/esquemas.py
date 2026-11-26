@@ -45,3 +45,29 @@ class EstadoSalud(BaseModel):
     modelo_version: str
     modelo_sha256: str
     base_datos: Literal["no_configurada", "conectada", "sin_conexion"] = "no_configurada"
+
+
+# --- Usuarios de la interfaz (DEF-11) ---
+class NuevoUsuario(BaseModel):
+    nombre: str = Field(max_length=200)
+    correo: str = Field(max_length=200)
+    contrasena: str = Field(max_length=256)
+    acepta_aviso: bool = False
+
+
+class SolicitudSesion(BaseModel):
+    correo: str = Field(max_length=200)
+    contrasena: str = Field(max_length=256)
+
+
+class Usuario(BaseModel):
+    id: int
+    nombre: str
+    correo: str
+
+
+class Sesion(BaseModel):
+    token: str
+    tipo: Literal["bearer"] = "bearer"
+    expira_en_s: int = Field(description="Segundos de validez del token")
+    usuario: Usuario

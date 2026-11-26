@@ -1,15 +1,19 @@
-"""Conexión OPCIONAL a PostgreSQL: registro operacional de la API (bloque B del diseño E21).
- 
-- Si no existe la variable DATABASE_URL, no se hace nada y la API funciona igual.
+"""Conexión OPCIONAL a PostgreSQL: registro operacional de la API y usuarios de la interfaz.
+
+- Si no existe la variable DATABASE_URL, no se hace nada y la API funciona igual (los endpoints
+  de usuarios responden 503 BASE_NO_DISPONIBLE).
+- Al arrancar se aplican db/01_esquema.sql y db/02_datos_iniciales.sql (idempotentes) y se
+  registra en version_modelo el modelo cargado, identificado por el SHA-256 de sus pesos.
 - Por cada solicitud se guarda UNA fila anónima en solicitud_inferencia (formato, tamaño, dimensiones,
   latencia, nº de ROI, modelo o error) y una fila por ROI en resultado_roi. NUNCA se guardan imágenes.
-- Si la base falla o faltan los datos iniciales, la inferencia NO se interrumpe (solo queda un aviso en el log).
- 
+- Si la base falla, la inferencia NO se interrumpe (solo queda un aviso en el log).
+
 DATABASE_URL de ejemplo (el nombre de la base distingue mayúsculas):
-    postgresql+psycopg://postgres:CLAVE@localhost:5432/ColorrectalAI
+    postgresql+psycopg://postgres:CLAVE@localhost:5432/colorrectalai
 """
 import logging
 import os
+from pathlib import Path
  
 from starlette.concurrency import run_in_threadpool
  
@@ -18,6 +22,8 @@ log = logging.getLogger("colorrectalai.db")
 _engine = None
 _creado = False
 _avisos = set()          # para no repetir el mismo aviso en cada solicitud
+CARPETA_SQL = Path(__file__).resolve().parent.parent / "db"
+ARCHIVOS_SQL = ("01_esquema.sql", "02_datos_iniciales.sql")
  
 SQL_MODELO = "SELECT id_modelo FROM version_modelo WHERE sha256_pesos = :sha"
 SQL_ERROR = "SELECT id_error FROM catalogo_error WHERE codigo_interno = :codigo"
@@ -109,11 +115,11 @@ def _insertar(latencia_ms, rois, error_codigo, modelo_sha256, formato, tamano_by
                 id_error = c.execute(text(SQL_ERROR), {"codigo": error_codigo}).scalar()
                 if id_error is None:
                     _avisar_una_vez("e" + error_codigo, f"El código de error {error_codigo} no está en catalogo_error "
-                                    "(ejecuta db/02_datos_iniciales.sql). No se registró la solicitud.")
+                                    "(revisa db/02_datos_iniciales.sql). No se registró la solicitud.")
                     return
             if id_modelo is None and id_error is None:
                 _avisar_una_vez("modelo", "El modelo cargado no está en version_modelo, por eso no se registran las "
-                                "solicitudes exitosas (ejecuta db/02_datos_iniciales.sql y revisa el SHA-256).")
+                                "solicitudes exitosas (revisa el arranque: el modelo se registra solo).")
                 return
  
             id_solicitud = c.execute(text(SQL_SOLICITUD), {
@@ -144,3 +150,62 @@ async def registrar(latencia_ms, rois, error_codigo, modelo_sha256,
     await run_in_threadpool(_insertar, latencia_ms, rois, error_codigo, modelo_sha256,
                             formato, tamano_bytes, ancho, alto)
  
+
+
+# ----------------------------------------------------------------------------------------------
+# Preparación de la base al arrancar
+# ----------------------------------------------------------------------------------------------
+SQL_MODELO_ACTIVO = """
+WITH exp AS (
+    INSERT INTO experimento (id_investigador, id_particion, nombre, entorno, framework, fecha_inicio, estado)
+    SELECT i.id_investigador, p.id_particion, CAST(:nombre_exp AS VARCHAR(80)), 'Google Colab (GPU)', 'Ultralytics YOLO (ONNX)',
+           CURRENT_TIMESTAMP, 'finalizado'
+    FROM investigador i, particion_dataset p
+    WHERE i.nombre_completo = 'Equipo System Force' AND p.nombre = 'centros_C1-C4_C5_C6'
+      AND NOT EXISTS (SELECT 1 FROM version_modelo WHERE sha256_pesos = CAST(:sha AS CHAR(64)))
+      AND NOT EXISTS (SELECT 1 FROM experimento WHERE nombre = CAST(:nombre_exp AS VARCHAR(80)))
+    RETURNING id_experimento
+)
+INSERT INTO version_modelo (id_experimento, nombre, version, formato, sha256_pesos, url_release,
+                            fecha_publicacion, estado)
+SELECT COALESCE((SELECT id_experimento FROM exp),
+                (SELECT id_experimento FROM experimento WHERE nombre = CAST(:nombre_exp AS VARCHAR(80)))),
+       'ColorrectalAI YOLO', CAST(:version AS VARCHAR(20)), 'onnx', CAST(:sha AS CHAR(64)), CAST(:url AS VARCHAR(255)), CURRENT_TIMESTAMP, 'activo'
+WHERE NOT EXISTS (SELECT 1 FROM version_modelo WHERE sha256_pesos = CAST(:sha AS CHAR(64)))
+"""
+
+
+def preparar(modelo_sha256: str, version: str, url_modelo: str = "") -> bool:
+    """Aplica el esquema y los datos iniciales y deja como 'activo' el modelo cargado.
+
+    Es idempotente y nunca lanza excepciones: devuelve False si no hay base o algo falla.
+    """
+    engine = obtener_engine()
+    if engine is None:
+        return False
+    try:
+        from sqlalchemy import text
+        with engine.begin() as c:
+            # Un solo proceso aplica las migraciones a la vez (por si hay varias réplicas).
+            c.execute(text("SELECT pg_advisory_xact_lock(4242)"))
+            for nombre in ARCHIVOS_SQL:
+                c.exec_driver_sql((CARPETA_SQL / nombre).read_text(encoding="utf-8")
+                                  .replace("BEGIN;", "").replace("COMMIT;", ""))
+            if modelo_sha256 and len(modelo_sha256) == 64:
+                otro = c.execute(text("SELECT sha256_pesos FROM version_modelo "
+                                      "WHERE nombre = 'ColorrectalAI YOLO' AND version = :v"),
+                                 {"v": version[:20]}).scalar()
+                if otro and otro != modelo_sha256:   # misma versión con otros pesos: se distingue por el SHA
+                    version = f"{version[:12]}-{modelo_sha256[:7]}"
+                url = url_modelo or "https://github.com/colorrectalai/ColorrectalAI-proyect/tree/develop/backend/modelos"
+                c.execute(text("UPDATE version_modelo SET estado = 'retirado' "
+                               "WHERE estado = 'activo' AND sha256_pesos <> :sha"), {"sha": modelo_sha256})
+                c.execute(text(SQL_MODELO_ACTIVO), {"sha": modelo_sha256, "version": version[:20], "url": url[:255],
+                                                    "nombre_exp": f"modelo desplegado {version}"[:80]})
+                c.execute(text("UPDATE version_modelo SET estado = 'activo' WHERE sha256_pesos = :sha"),
+                          {"sha": modelo_sha256})
+        log.info("Base de datos lista (esquema, datos iniciales y modelo %s registrados).", version)
+        return True
+    except Exception:
+        log.exception("No se pudo preparar la base de datos; la API sigue funcionando sin registro.")
+        return False
