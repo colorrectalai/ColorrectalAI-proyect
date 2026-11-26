@@ -1,0 +1,9 @@
+# Versiones del entrenamiento registrado (registro_experimento.json → "versiones").
+# Python 3.13 en Google Colab con GPU. torch se usa con CUDA 13.0 (2.14.1+cu130) en Colab.
+ultralytics==8.4.208
+torch==2.14.1
+onnxruntime==1.31.1
+# Usadas por el cuaderno para evaluar y preparar datos (sin versión registrada: se usa la de Colab).
+scikit-learn
+opencv-python-headless
+matplotlib
