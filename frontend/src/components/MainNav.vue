@@ -2,15 +2,15 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronDown, ChevronUp, CircleHelp, History, House, LogIn, LogOut, PanelsTopLeft, ScanSearch, UserRoundPlus } from '@lucide/vue'
-import { limpiarPerfilActivo } from '../userProfile'
+import { haySesion, limpiarPerfilActivo } from '../userProfile'
 
 const route = useRoute()
 const router = useRouter()
-// Solo muestra la navegación privada cuando hay una sesión activa.
+// Solo muestra la navegación privada cuando hay una sesión con token vigente.
 // La ruta es una dependencia reactiva para actualizarla al entrar o cerrar sesión.
 const loggedInView = computed(() => {
   route.path
-  return localStorage.getItem('colorrectalai-session') === 'active'
+  return haySesion()
 })
 // Nombre guardado durante el registro; la ruta reactiva actualiza el dato al iniciar sesión.
 const accountName = computed(() => {

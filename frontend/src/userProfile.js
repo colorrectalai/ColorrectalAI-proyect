@@ -1,51 +1,40 @@
-// Perfil local de demostración, asociado al correo que se usa para iniciar sesión.
-const PROFILES_KEY = 'colorrectalai-user-profiles'
+// Sesión del usuario en el navegador. La cuenta vive en el servidor (PostgreSQL, contraseña con hash);
+// aquí solo se guardan el token de sesión, el correo y el nombre para el saludo. Nunca la contraseña.
+const CLAVE_TOKEN = 'colorrectalai-token'
+const CLAVE_VENCE = 'colorrectalai-token-vence'
 
-function readProfiles() {
-  try {
-    const profiles = JSON.parse(localStorage.getItem(PROFILES_KEY) || '{}')
-    return profiles && typeof profiles === 'object' && !Array.isArray(profiles) ? profiles : {}
-  } catch {
-    return {}
-  }
+// Guarda la sesión que devuelve la API al registrarse o iniciar sesión.
+export function guardarSesion(sesion) {
+  localStorage.setItem(CLAVE_TOKEN, sesion.token)
+  localStorage.setItem(CLAVE_VENCE, String(Date.now() + sesion.expira_en_s * 1000))
+  localStorage.setItem('colorrectalai-user-email', sesion.usuario.correo)
+  localStorage.setItem('colorrectalai-user-name', sesion.usuario.nombre)
+  localStorage.setItem('colorrectalai-session', 'active')
 }
 
-function normalizeEmail(email) {
-  return email.trim().toLocaleLowerCase('es-CO')
+// Token vigente o null si no hay sesión o ya venció.
+export function tokenActual() {
+  const token = localStorage.getItem(CLAVE_TOKEN)
+  const vence = Number(localStorage.getItem(CLAVE_VENCE) || 0)
+  if (!token || Date.now() >= vence) return null
+  return token
 }
 
-function nameFromEmail(email) {
-  const localPart = normalizeEmail(email).split('@')[0] || 'usuario'
-  return localPart
-    .replace(/[._-]+/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .map((part) => part ? part[0].toLocaleUpperCase('es-CO') + part.slice(1) : '')
-    .join(' ')
+// Hay sesión solo si el token sigue vigente; si venció, se limpia el perfil.
+export function haySesion() {
+  if (tokenActual()) return true
+  if (localStorage.getItem('colorrectalai-session')) limpiarPerfilActivo()
+  return false
 }
 
-// Registra el nombre y activa el perfil en el navegador actual.
-export function guardarPerfilLocal(email, nombre) {
-  const correo = normalizeEmail(email)
-  const nombreCompleto = nombre.trim()
-  const perfiles = readProfiles()
-  perfiles[correo] = nombreCompleto
-  localStorage.setItem(PROFILES_KEY, JSON.stringify(perfiles))
-  localStorage.setItem('colorrectalai-user-email', correo)
-  localStorage.setItem('colorrectalai-user-name', nombreCompleto)
-}
-
-// Busca el nombre del registro o genera uno legible desde el correo en el prototipo.
-export function activarPerfilLocal(email) {
-  const correo = normalizeEmail(email)
-  const nombre = readProfiles()[correo] || nameFromEmail(correo)
-  localStorage.setItem('colorrectalai-user-email', correo)
-  localStorage.setItem('colorrectalai-user-name', nombre)
-}
-
-// Al cerrar sesión conserva el directorio local, pero elimina el perfil activo.
+// Al cerrar sesión (o si el token venció) se borra todo el perfil activo.
 export function limpiarPerfilActivo() {
+  localStorage.removeItem(CLAVE_TOKEN)
+  localStorage.removeItem(CLAVE_VENCE)
   localStorage.removeItem('colorrectalai-user-email')
   localStorage.removeItem('colorrectalai-user-name')
   localStorage.removeItem('colorrectalai-session')
 }
+
+// Borra el directorio de perfiles que guardaba la versión de demostración anterior.
+localStorage.removeItem('colorrectalai-user-profiles')

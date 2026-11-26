@@ -22,10 +22,15 @@ async def manejar_error_interno(_: Request, exc: Exception):
     return _json(500, "ERROR_INTERNO", "Ocurrió un error interno al procesar la imagen.")
 
 
-async def manejar_validacion(_: Request, exc: RequestValidationError):
+async def manejar_validacion(request: Request, exc: RequestValidationError):
     """422 propio de FastAPI (falta el campo, tipo incorrecto...) en el formato y el idioma del proyecto."""
+    if request.url.path.endswith("/inferencias"):
+        return _json(422, "SOLICITUD_INVALIDA",
+                     "La solicitud no es válida. Envíe una imagen en el campo 'imagen' (multipart/form-data).")
+    campos = sorted({str(e["loc"][-1]) for e in exc.errors() if e.get("loc")})
     return _json(422, "SOLICITUD_INVALIDA",
-                 "La solicitud no es válida. Envíe una imagen en el campo 'imagen' (multipart/form-data).")
+                 "La solicitud no es válida. Revise los campos: " + ", ".join(campos) + "." if campos
+                 else "La solicitud no es válida.")
 
 
 _HTTP = {404: ("RUTA_NO_ENCONTRADA", "La ruta solicitada no existe."),
