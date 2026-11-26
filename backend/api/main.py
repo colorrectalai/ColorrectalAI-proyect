@@ -63,7 +63,7 @@ def _datos_archivo(datos, img):
  
 def crear_app(cfg=None, modelo=None) -> FastAPI:
     cfg = cfg or cargar_config()
-    app = FastAPI(title="ColorrectalAI · API de inferencia", version="0.1.0",
+    app = FastAPI(title="ColorrectalAI · API de inferencia", version="0.2.1",
                   description="Uso académico y experimental. No es un dispositivo médico.",
                   lifespan=ciclo_vida)
     app.state.cfg = cfg

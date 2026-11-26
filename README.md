@@ -4,12 +4,12 @@
 
 Proyecto académico de la asignatura **Gestión de Proyectos de TI** — Ingeniería de Sistemas, Universidad Santiago de Cali (USC), 2026.
 
-![Estado](https://img.shields.io/badge/estado-v0.1.0%20pre--release-yellow)
+![Estado](https://img.shields.io/badge/estado-v0.2.1%20pre--release-yellow)
 ![Tipo](https://img.shields.io/badge/tipo-proyecto%20acad%C3%A9mico-blue)
 ![Vue](https://img.shields.io/badge/Vue-3-42b883?logo=vue.js&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
-![YOLO](https://img.shields.io/badge/YOLO26n-ONNX-005ced)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-opcional-336791?logo=postgresql&logoColor=white)
+![YOLO](https://img.shields.io/badge/YOLO-segmentaci%C3%B3n%20ONNX-005ced)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Railway-336791?logo=postgresql&logoColor=white)
 
 ---
 
@@ -38,69 +38,88 @@ Proyecto académico de la asignatura **Gestión de Proyectos de TI** — Ingenie
 
 El proyecto se desarrolla siguiendo buenas prácticas de dirección de proyectos (PMBOK) e ingeniería de requisitos (ISO/IEC/IEEE 29148).
 
+**En línea:** <https://colorrectalai-production.up.railway.app> (versión publicada desde `main`).
+
 ## Arquitectura
 
-Arquitectura **cliente-servidor en capas** (modelo – API – interfaz), integrada al ecosistema ONCO-AI_USC 2026 B:
+ColorrectalAI usa una arquitectura **cliente-servidor en capas**. El **cliente** es una aplicación web en Vue 3 (`frontend/`). El **servidor** es una API REST en Python con FastAPI (`backend/api/`), que ejecuta el **modelo de IA** YOLO de segmentación en formato ONNX (`backend/ia/`) y guarda en la **base de datos PostgreSQL** el registro de cada solicitud, los resultados y las cuentas de usuario. El proyecto se integra al ecosistema ONCO-AI_USC 2026 B.
+
+### Componentes y flujo de datos
+
+1. **Cliente (Frontend, `frontend/`)**: aplicación web con Vue 3, Vite y Vue Router. El usuario crea su cuenta o inicia sesión, sube una o varias imágenes JPG o PNG y las envía al servidor con `POST /api/v1/inferencias`. Muestra la ROI, la máscara de segmentación, la comparación visual y el historial local.
+2. **Servidor (API REST en Python, `backend/api/`)**: construido con FastAPI, Uvicorn y Pydantic. Valida la imagen, controla la admisión de solicitudes, maneja los errores, coordina la inferencia y gestiona el registro y el inicio de sesión (contraseña con hash scrypt y token firmado).
+3. **Modelo de IA (`backend/ia/`)**: pipeline en Python de preprocesamiento, YOLO de segmentación (`seg-0.1`) exportado a ONNX y ejecutado con ONNX Runtime en CPU, posprocesamiento y explicabilidad. Devuelve ROI, clase, confianza y la máscara de la región.
+4. **Base de datos PostgreSQL (`backend/db/`)**: la API la usa mediante SQLAlchemy y psycopg. Al arrancar aplica el esquema y los datos iniciales por sí sola, y registra el modelo cargado por su SHA-256. Guarda cada solicitud de inferencia (formato, tamaño, latencia, número de ROI, modelo o error), los resultados por ROI, las cuentas de usuario, los experimentos, las versiones del modelo y sus métricas. Guía en [`database/README.MD`](database/README.MD).
+5. **Entrenamiento (`entrenamiento/`)**: cuaderno de Ultralytics en Google Colab con el dataset PolypGen. Exporta el modelo a ONNX, que se publica en GitHub Releases con su SHA-256. Tiene su README con la guía de reproducción.
+6. **Despliegue**: Railway publica desde la rama `main` tres servicios: la API (Docker, `backend/Dockerfile`), el frontend y PostgreSQL. La integración continua corre las pruebas con pytest y un PostgreSQL de pruebas en GitHub Actions (`.github/workflows/`).
+
+### Diagrama
 
 ```mermaid
 flowchart LR
-  U[Usuario] --> F["Frontend<br/>Vue 3 + Vite<br/>(frontend/)"]
-  F -- "POST /api/v1/inferencias<br/>imagen JPG/PNG" --> A["API REST<br/>FastAPI + Uvicorn<br/>(backend/api)"]
-  A --> IA["Capa de IA<br/>preprocesamiento → YOLO26n ONNX<br/>→ posprocesamiento → explicabilidad<br/>(backend/ia)"]
-  A -. "registro anónimo opcional" .-> D[("PostgreSQL<br/>(database/)")]
-  R[("GitHub Releases<br/>best.onnx + SHA-256")] -. "descarga y verificación" .-> IA
-  C["Google Colab<br/>entrenamiento YOLO<br/>(entrenamiento/)"] -. "exporta" .-> R
-  A -- "ROI + clase + confianza + latencias" --> F
+  U[Usuario] --> F["Cliente: Frontend<br/>Vue 3 + Vite<br/>(frontend/)"]
+  F -- "POST /api/v1/inferencias<br/>imagen JPG/PNG" --> A["Servidor: API REST Python<br/>FastAPI + Uvicorn + Pydantic<br/>(backend/api)"]
+  A --> IA["Modelo de IA<br/>preprocesamiento → YOLO seg ONNX<br/>→ posprocesamiento → explicabilidad<br/>(backend/ia)"]
+  IA -- "ROI + máscara + clase + confianza" --> A
+  A -- "ROI + máscara + clase + confianza + latencias" --> F
+  F -- "registro / inicio de sesión" --> A
+  A -- "SQLAlchemy + psycopg<br/>solicitudes, resultados y usuarios" --> D[("Base de datos<br/>PostgreSQL<br/>(backend/db)")]
+  R[("GitHub Releases<br/>modelo .onnx + SHA-256")] -- "pesos verificados" --> IA
+  C["Entrenamiento<br/>Ultralytics en Google Colab<br/>(entrenamiento/)"] -- "exporta modelo" --> R
+  C -. "experimentos y métricas<br/>(según esquema)" .-> D
 ```
+
+### Capas y tecnologías
 
 | Capa | Tecnología | Carpeta |
 |---|---|---|
-| Presentación | Vue 3, Vite, Vue Router | `frontend/` |
-| Servicio (API REST) | FastAPI, Uvicorn, Pydantic | `backend/api/` |
-| Inteligencia artificial | YOLO26n exportado a ONNX, ONNX Runtime (CPU) | `backend/ia/` |
-| Datos (opcional) | PostgreSQL, SQLAlchemy, psycopg | `database/` |
+| Cliente / Presentación | Vue 3, Vite, Vue Router | `frontend/` |
+| Servidor / API REST (Python) | FastAPI, Uvicorn, Pydantic | `backend/api/` |
+| Modelo de inteligencia artificial (Python) | YOLO de segmentación (`seg-0.1`) exportado a ONNX, ONNX Runtime (CPU) | `backend/ia/` |
+| Base de datos | PostgreSQL (migración automática al arrancar), SQLAlchemy, psycopg | `backend/db/`, `database/` |
 | Entrenamiento | Ultralytics en Google Colab, dataset PolypGen | `entrenamiento/` |
-| Despliegue | Docker en Render (API), GitHub Pages (frontend) | `render.yaml` |
+| Despliegue | Railway: API (Docker), frontend y PostgreSQL, desde `main` | `backend/Dockerfile` |
 | Integración continua | GitHub Actions (pytest) | `.github/workflows/` |
 
-**Privacidad:** la API procesa cada imagen en memoria y **no la almacena**. La base de datos, si se configura, solo guarda metadatos anónimos de cada solicitud (formato, tamaño, latencia, número de ROI, modelo o error).
+**Privacidad:** la API procesa cada imagen en memoria y **no la almacena**. La base de datos solo guarda metadatos anónimos de cada solicitud (formato, tamaño, latencia, número de ROI, modelo o error) y las cuentas de usuario, con la contraseña como hash scrypt (nunca en texto plano).
+
+`backend/`, `frontend/`, `database/` y `entrenamiento/` tienen su propio `README`.
 
 ## Estado de la versión
 
-**v0.1.0 (pre-release).** El flujo completo funciona de punta a punta, pero la versión **no cumple todavía el criterio de salida de QA**. El detalle está en [`pruebas/`](pruebas/).
+**v0.2.1 (pre-release).** Versión publicada en Railway desde `main`. El flujo completo funciona en producción, pero la versión **todavía no cumple el criterio de salida de QA**: quedan dos defectos altos, ambos del modelo y sus datos. El detalle está en [`pruebas/`](pruebas/).
 
 | Módulo | Estado |
 |---|---|
-| Frontend | ✅ Funcional, integrado con la API |
-| API de inferencia | ✅ Funcional (latencia p95 local 0.16 s) |
-| Modelo YOLO | 🟡 Baseline de 10 épocas; calibración (ECE) por mejorar |
-| Base de datos | 🟡 Esquema listo; datos iniciales (`seed`) pendientes |
-| Registro de usuarios | ⏳ Pendiente (el formulario actual es de demostración) |
-| Pruebas QA | 🟡 Primera ronda: 3 de 12 casos *Must* aprobados, defectos registrados |
+| Frontend | ✅ Funcional; contraste WCAG AA, carga múltiple, comparación visual e historial local |
+| API de inferencia | ✅ Funcional (p95 local 0.87 s con el modelo de segmentación) |
+| Modelo YOLO | 🟡 Segmentación `seg-0.1` (Release v0.2.0); faltan su cuaderno y sus métricas (Dice, IoU, ECE) |
+| Base de datos | ✅ PostgreSQL en Railway, con migración y datos iniciales automáticos |
+| Registro de usuarios | ✅ Registro e inicio de sesión reales; contraseña con hash scrypt |
+| Pruebas QA | 🟡 Ciclo 3: 23 de 32 casos aprobados, 12 de 16 defectos cerrados, 70 pruebas automáticas (cobertura 93 %) |
 
 ## Estructura del repositorio
 
 ```text
 ColorrectalAI-proyect/
-├── frontend/              # Interfaz web (Vue 3 + Vite)
-├── backend/               # API de inferencia
-│   ├── api/               #   rutas, validación, admisión, errores, registro en BD
-│   ├── ia/                #   preprocesamiento, adaptador YOLO (ONNX), posprocesamiento, explicabilidad
-│   ├── tests/             #   pruebas con pytest (modelo falso, no requiere el .onnx)
-│   └── modelos/           #   aquí va best.onnx (no se versiona; se publica en Releases)
-├── database/              # Esquema PostgreSQL y guía de instalación
-├── entrenamiento/         # Cuaderno de Colab y registro del experimento
-├── pruebas/               # Informe de QA, Excel TSP y pre-prueba de usabilidad
+├── frontend/              # Cliente: interfaz web (Vue 3 + Vite)
+├── backend/               # Servidor: API de inferencia (Python)
+│   ├── api/               #   FastAPI: rutas, validación, admisión, errores, registro en BD
+│   ├── ia/                #   modelo de IA: preprocesamiento, adaptador YOLO (ONNX), posprocesamiento, explicabilidad
+│   ├── db/                #   esquema y datos iniciales de PostgreSQL (se aplican al arrancar)
+│   ├── tests/             #   pruebas con pytest (modelo falso; las de base de datos usan TEST_DATABASE_URL)
+│   └── modelos/           #   best_seg.onnx, modelo desplegado (también en el Release v0.2.0)
+├── database/              # Guía de la base de datos PostgreSQL
+├── entrenamiento/         # Cuaderno de Colab, registro del experimento y guía de reproducción
+├── pruebas/               # Informes de los ciclos de QA, plan de pruebas, Excel TSP y matriz unitaria
 ├── .github/workflows/     # CI: pruebas del backend en cada push y pull request
-├── render.yaml            # Despliegue de la API en Render
+├── render.yaml            # Configuración anterior para Render (en desuso; hoy se usa Railway)
 └── README.md
 ```
 
-`backend/`, `frontend/` y `database/` tienen su propio `README.md`. El de `entrenamiento/` está pendiente (DEF-12 del informe de QA).
-
 ## Instalación y ejecución
 
-**Requisitos:** Python 3.12, Node.js 20 o superior, y el archivo `best.onnx` (disponible en [Releases](../../releases)).
+**Requisitos:** Python 3.12, Node.js 20 o superior y PostgreSQL (opcional en local). El modelo `best_seg.onnx` ya viene en `backend/modelos/` y también está en [Releases](../../releases).
 
 ### Backend (API)
 
@@ -108,10 +127,9 @@ ColorrectalAI-proyect/
 cd backend
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
-cp .env.example .env
-# copiar best.onnx en backend/modelos/
+cp .env.example .env          # DATABASE_URL y TOKEN_SECRETO para usar la base de datos
 uvicorn api.main:app --reload
-pytest -q
+pytest -q                     # con TEST_DATABASE_URL también corren las pruebas de PostgreSQL
 ```
 
 Documentación interactiva de la API: <http://localhost:8000/docs>
@@ -119,7 +137,10 @@ Documentación interactiva de la API: <http://localhost:8000/docs>
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/api/v1/salud` | Estado del servicio, versión y SHA-256 del modelo |
-| POST | `/api/v1/inferencias` | Recibe una imagen (`imagen`, JPG/PNG) y devuelve ROI, clasificación, confianza y latencias |
+| POST | `/api/v1/inferencias` | Recibe una imagen (`imagen`, JPG/PNG) y devuelve ROI, máscara, clasificación, confianza y latencias |
+| POST | `/api/v1/usuarios` | Crea una cuenta (nombre, correo, contraseña ≥ 8, aceptación del aviso) y devuelve la sesión |
+| POST | `/api/v1/sesiones` | Inicia sesión con correo y contraseña |
+| GET | `/api/v1/usuarios/yo` | Datos del usuario de la sesión (`Authorization: Bearer`) |
 
 ### Frontend
 
@@ -131,11 +152,15 @@ npm run dev
 
 Abre <http://localhost:5173>. En producción, define `VITE_API_URL` con la URL de la API desplegada.
 
-### Base de datos (opcional)
+### Base de datos (PostgreSQL)
 
-Ver [`database/README.md`](database/). Si no se define `DATABASE_URL`, la API funciona igual sin base de datos.
+Crea una base vacía y define `DATABASE_URL` en `backend/.env`. **No hay que ejecutar scripts**: al arrancar, la API aplica `backend/db/01_esquema.sql` y `backend/db/02_datos_iniciales.sql` y registra el modelo cargado. Sin `DATABASE_URL` la inferencia funciona igual, pero no se guardan registros ni se pueden crear cuentas. Más detalles en [`database/README.MD`](database/README.MD).
 
 ## Modelo de IA
+
+**Modelo desplegado:** YOLO de segmentación `seg-0.1` (`backend/modelos/best_seg.onnx`, Release [v0.2.0](../../releases/tag/v0.2.0)), SHA-256 `61bec40566c15624f8319af8e9da197a06c24424f51c7956e21d70ef632ef603`. Su cuaderno de entrenamiento y sus métricas (Dice, IoU, ECE) todavía no están en el repositorio.
+
+**Baseline registrado** (detección, Release v0.1.0):
 
 | Parámetro | Valor |
 |---|---|
@@ -146,7 +171,7 @@ Ver [`database/README.md`](database/). Si no se define `DATABASE_URL`, la API fu
 | Prueba (C6, 520 imágenes) | mAP@0.5 0.728 · sensibilidad 0.838 · especificidad 0.788 · F1 0.883 · ROC-AUC 0.901 · ECE 0.256 |
 | SHA-256 de `best.onnx` | `b4c98b3538b28f2f22e7fbe6eaabff05662ad70cc9556de45bf881127a2410f3` |
 
-El detalle completo está en [`entrenamiento/registro_experimento.json`](entrenamiento/registro_experimento.json).
+El detalle está en [`entrenamiento/registro_experimento.json`](entrenamiento/registro_experimento.json) y la guía para reproducirlo en [`entrenamiento/README.md`](entrenamiento/README.md).
 
 ## Problema y justificación
 
@@ -189,7 +214,7 @@ Desarrollar un sistema experimental que permita la detección e interpretación 
 | Elemento | Cantidad / referencia |
 |---|---|
 | Requisitos especificados en la ERS | 27 |
-| Casos de prueba | 16 (CP-01 a CP-16) |
+| Casos de prueba | 32: CP-01 a CP-16, CF-01 a CF-06, RG-01 a RG-06, ES-01 a ES-03 y prueba de humo |
 | Casos de uso | CU-01 a CU-13 |
 | Priorización | MoSCoW (Must / Should / Could / Won't) |
 | Estándar de especificación | ISO/IEC/IEEE 29148 |
@@ -199,10 +224,10 @@ La **Matriz de Trazabilidad de Requisitos** vincula cada requisito con su caso d
 ## Gestión del proyecto y flujo de trabajo
 
 - **Marco de referencia:** PMBOK (6.ª ed.) y plantillas PM²; desarrollo con Team Software Process (TSP).
-- **Ramas:** `develop` (desarrollo) → `qa` (pruebas) → `main` (versiones etiquetadas). Las tres están protegidas: todo cambio entra por *pull request*.
+- **Ramas:** solo tres ramas permanentes: `develop` (desarrollo) → `qa` (pruebas) → `main` (versiones etiquetadas, la que publica Railway). Todo cambio entra por *pull request* y las ramas de trabajo se borran al fusionarse.
 - **Contribuir:** cada integrante trabaja en `develop` de su *fork* y abre un *pull request* hacia `develop` de este repositorio.
 - **Commits:** formato [Conventional Commits](https://www.conventionalcommits.org/es/) (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`).
-- **Versiones:** cada paso a `main` se etiqueta (`vX.Y.Z`) y el modelo se publica en el Release con su SHA-256.
+- **Versiones:** cada paso a `main` se etiqueta (`vX.Y.Z`) y el modelo se publica en el Release con su SHA-256. Versión actual: **v0.2.1**.
 
 ## Documentación
 
@@ -217,7 +242,8 @@ La **Matriz de Trazabilidad de Requisitos** vincula cada requisito con su caso d
 | Plan de gestión del alcance | Alcance según PMBOK |
 | Plan para la dirección del proyecto | Alcance y calidad |
 | Arquitectura de software | Estilo arquitectónico y componentes |
-| Diseño de base de datos | Cinco fases; implementado en PostgreSQL (`database/`) |
+| Diseño de base de datos | Cinco fases; implementado en PostgreSQL (`backend/db/`) |
+| Plan de pruebas y plan de control de calidad | Casos, criterios de aceptación y resultados de los ciclos de QA (`pruebas/`) |
 
 ## Equipo
 
@@ -225,9 +251,9 @@ La **Matriz de Trazabilidad de Requisitos** vincula cada requisito con su caso d
 |---|---|
 | Edwin Cabezas Cuero | Líder del proyecto |
 | Camilo Steban Mutis Arango | Líder de desarrollo y QA |
-| Alejandro Guzman Posada | Integrante (backend y modelo de IA) |
-| Juan Stevan Loza Gutiérrez | Integrante |
-| Juan Fernando Sánchez Hoyos | Integrante |
+| Alejandro Guzman Posada | Desarrollador (backend y modelo de IA) |
+| Juan Stevan Loza Gutiérrez | Desarrollador UI |
+| Juan Fernando Sánchez Hoyos | Planificador |
 | Jair Enrique Castro Sanclemente | Docente, gerente del proyecto y patrocinador |
 
 ## Aviso importante
