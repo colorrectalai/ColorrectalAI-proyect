@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowDown, CalendarDays, FileImage, Images, Info, ScanSearch, Search } from '@lucide/vue'
+import { ArrowDown, CalendarDays, ChevronDown, FileImage, Images, Info, ScanSearch, Search } from '@lucide/vue'
 import PageHead from '../components/PageHead.vue'
 import InterpretationHistoryTable from '../components/InterpretationHistoryTable.vue'
-import { descargarResumen, listarInterpretaciones, restaurarInterpretacion } from '../history'
+import { listarInterpretaciones, obtenerInterpretacion, restaurarInterpretacion } from '../history'
+import { descargarInformePdf } from '../reports/pdfReport'
 import { estado } from '../store'
 
 const router = useRouter()
@@ -16,6 +17,7 @@ const paginaActual = ref(1)
 const cargando = ref(true)
 const errorHistorial = ref('')
 const errorAccion = ref('')
+const descargandoPdfId = ref('')
 const tamanoPagina = 5
 
 // Totales calculados con los registros reales que se guardaron en este navegador.
@@ -107,13 +109,28 @@ const abrirInterpretacion = async (item) => {
   }
 }
 
+// Recupera el detalle y genera un PDF con el resumen general y cada imagen.
+const descargarInforme = async (item) => {
+  if (descargandoPdfId.value) return
+  errorAccion.value = ''
+  descargandoPdfId.value = item.id
+  try {
+    const interpretacion = await obtenerInterpretacion(item.id)
+    if (!interpretacion) throw new Error('No se encontró esta interpretación en el historial local.')
+    await descargarInformePdf(interpretacion)
+  } catch (error) {
+    errorAccion.value = error.message || 'No se pudo generar el informe PDF.'
+  } finally {
+    descargandoPdfId.value = ''
+  }
+}
+
 </script>
 
 <template>
   <main class="page history-page">
     <!-- Encabezado de historial y acceso directo para iniciar otra interpretación. -->
     <PageHead
-      eyebrow="CUADERNO ACADÉMICO / HISTORIAL"
       title="Historial de interpretaciones"
       description="Recupera cada análisis con sus imágenes y resultados experimentales."
       action="Nuevo análisis"
@@ -154,6 +171,7 @@ const abrirInterpretacion = async (item) => {
             <option value="7">Últimos 7 días</option>
             <option value="30">Últimos 30 días</option>
           </select>
+          <ChevronDown class="date-chevron" aria-hidden="true" />
         </label>
         <button class="sort-control" type="button" @click="masRecientesPrimero = !masRecientesPrimero">
           {{ masRecientesPrimero ? 'Más recientes primero' : 'Más antiguos primero' }}
@@ -174,8 +192,10 @@ const abrirInterpretacion = async (item) => {
         :empty-title="errorHistorial ? 'No se pudo cargar el historial' : interpretaciones.length ? 'No hay resultados para estos filtros' : 'Todavía no hay interpretaciones guardadas'"
         :empty-description="errorHistorial ? 'Revisa el almacenamiento local e inténtalo de nuevo.' : interpretaciones.length ? 'Prueba con otro ID o periodo.' : 'Cuando completes un análisis, aparecerá aquí.'"
         :empty-to="!errorHistorial && !interpretaciones.length ? '/carga' : ''"
+        :downloading-id="descargandoPdfId"
+        download-label="Descargar resultados PDF"
         @open="abrirInterpretacion"
-        @download="descargarResumen"
+        @download="descargarInforme"
       />
 
       <!-- Navegación entre páginas de resultados filtrados. -->
@@ -342,16 +362,35 @@ const abrirInterpretacion = async (item) => {
 .date-control {
   flex: 0 0 auto;
   color: var(--brand);
+  cursor: pointer;
+}
+
+.date-control:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgb(0 157 255 / 12%);
 }
 
 .date-control select {
   max-width: 190px;
   border: 0;
-  outline: 0;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
   background: transparent;
   color: var(--navy);
   font-size: 14px;
   cursor: pointer;
+}
+
+.date-control select:focus-visible {
+  outline: none;
+}
+
+.date-control .date-chevron {
+  width: 16px;
+  height: 16px;
+  color: #617b91;
 }
 
 .sort-control {

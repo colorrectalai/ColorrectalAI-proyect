@@ -6,6 +6,7 @@ venv/
 node_modules/
 dist/
 *.onnx
+!backend/modelos/best_seg.onnx
 *.pt
 datasets/
 .vscode/*
