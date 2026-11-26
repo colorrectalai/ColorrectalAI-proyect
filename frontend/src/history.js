@@ -146,6 +146,7 @@ export async function restaurarInterpretacion(id) {
   estado.archivos = archivos
   estado.id = interpretacion.id
   estado.historialError = ''
+  estado.fallidos = []
   estado.resultados = interpretacion.resultados.map((resultado, index) => ({
     nombre: resultado.nombre,
     url: URL.createObjectURL(archivos[index]),
