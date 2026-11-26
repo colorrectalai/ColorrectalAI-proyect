@@ -42,3 +42,48 @@ export async function analizarImagen(archivo) {
     clearTimeout(reloj)
   }
 }
+
+// --- Cuentas de usuario (el servidor guarda solo el hash de la contraseña) ---
+async function enviarJSON(ruta, cuerpo, token) {
+  const control = new AbortController()
+  const reloj = setTimeout(() => control.abort(), 60000)
+  try {
+    const cabeceras = { 'Content-Type': 'application/json' }
+    if (token) cabeceras.Authorization = 'Bearer ' + token
+    const resp = await fetch(BASE + ruta, {
+      method: cuerpo === undefined ? 'GET' : 'POST',
+      headers: cabeceras,
+      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+      signal: control.signal,
+    })
+    const json = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      const error = new Error(json.error?.mensaje || 'El servidor respondió con un error (' + resp.status + ').')
+      error.codigo = json.error?.codigo
+      error.estado = resp.status
+      throw error
+    }
+    return json
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('El servidor tardó demasiado en responder. Intenta de nuevo.')
+    if (e instanceof TypeError) throw new Error('No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.')
+    throw e
+  } finally {
+    clearTimeout(reloj)
+  }
+}
+
+// Crea la cuenta y devuelve la sesión: { token, expira_en_s, usuario: { id, nombre, correo } }
+export function registrarUsuario({ nombre, correo, contrasena, aceptaAviso }) {
+  return enviarJSON('/api/v1/usuarios', { nombre, correo, contrasena, acepta_aviso: aceptaAviso })
+}
+
+// Inicia sesión con correo y contraseña; devuelve la misma forma que registrarUsuario.
+export function iniciarSesion({ correo, contrasena }) {
+  return enviarJSON('/api/v1/sesiones', { correo, contrasena })
+}
+
+// Comprueba que el token siga vigente y devuelve { id, nombre, correo }.
+export function usuarioActual(token) {
+  return enviarJSON('/api/v1/usuarios/yo', undefined, token)
+}

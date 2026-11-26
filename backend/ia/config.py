@@ -13,11 +13,11 @@ def _env(nombre: str, defecto, tipo=str):
 @dataclass(frozen=True)
 class Config:
     # --- Modelo ---
-    ruta_modelo: str = field(default_factory=lambda: _env("MODELO_RUTA", "modelos/best.onnx"))
+    ruta_modelo: str = field(default_factory=lambda: _env("MODELO_RUTA", "modelos/best_seg.onnx"))
     # Si el archivo no existe, se descarga de GitHub Releases (URL del asset .onnx).
     url_modelo: str = field(default_factory=lambda: _env("MODELO_URL", ""))
     sha256_modelo: str = field(default_factory=lambda: _env("MODELO_SHA256", "").lower())
-    version_modelo: str = field(default_factory=lambda: _env("MODELO_VERSION", "baseline-0.1"))
+    version_modelo: str = field(default_factory=lambda: _env("MODELO_VERSION", "seg-0.1"))
 
     # --- Inferencia (mismos valores que el Colab) ---
     tamano_img: int = field(default_factory=lambda: _env("TAMANO_IMG", 640, int))

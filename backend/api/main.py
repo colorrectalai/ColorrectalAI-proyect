@@ -24,6 +24,7 @@ from .errores import (ErrorAPI, manejar_error_api, manejar_error_interno,
                       manejar_http, manejar_validacion)
 from .esquemas import EstadoSalud, RespuestaInferencia
 from .servicio_inferencia import analizar
+from .usuarios import router as router_usuarios
 from .validacion import validar_imagen
  
 log = logging.getLogger("colorrectalai.api")
@@ -40,6 +41,9 @@ async def ciclo_vida(app: FastAPI):
             await run_in_threadpool(app.state.modelo.cargar)
         except Exception:
             log.exception("No se pudo cargar el modelo")
+        # Esquema, datos iniciales y registro del modelo cargado (solo si hay DATABASE_URL).
+        await run_in_threadpool(db.preparar, getattr(app.state.modelo, "sha256_real", "") or "",
+                                cfg.version_modelo, cfg.url_modelo)
  
     tarea = asyncio.create_task(cargar())
     yield
@@ -72,6 +76,8 @@ def crear_app(cfg=None, modelo=None) -> FastAPI:
     app.add_exception_handler(StarletteHTTPException, manejar_http)
     app.add_exception_handler(Exception, manejar_error_interno)
  
+    app.include_router(router_usuarios)
+
     @app.get("/api/v1/salud", response_model=EstadoSalud, tags=["estado"])
     def salud():
         m = app.state.modelo

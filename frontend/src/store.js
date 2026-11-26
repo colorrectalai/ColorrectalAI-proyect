@@ -4,6 +4,7 @@ import { reactive } from 'vue'
 export const estado = reactive({
   archivos: [],     // imágenes elegidas en /carga
   resultados: [],   // { nombre, url, respuesta } por cada imagen analizada
+  fallidos: [],     // { nombre, mensaje } por cada imagen que la API rechazó en el último análisis
   id: '',           // identificador de la interpretación actual
   historialError: '', // aviso si no se pudo guardar una interpretación localmente
 })
