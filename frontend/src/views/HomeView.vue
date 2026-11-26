@@ -662,7 +662,7 @@ const resultLimits = [
 }
 .symptom-note {
   margin: 10px 0 8px;
-  color: #70849a;
+  color: var(--muted);
   line-height: 1.5;
   font-size: 11px;
 }
@@ -687,7 +687,7 @@ const resultLimits = [
   max-width: 500px;
   justify-self: end;
   margin: 0 0 3px;
-  color: #6d8299;
+  color: var(--muted);
   line-height: 1.6;
   font-size: 12px;
 }
@@ -708,7 +708,7 @@ const resultLimits = [
 }
 .exploration-card > p {
   margin: 0;
-  color: #6e8398;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -721,7 +721,7 @@ const resultLimits = [
 .start-heading p {
   max-width: 720px;
   margin: 7px 0 0;
-  color: #6d8299;
+  color: var(--muted);
   line-height: 1.55;
   font-size: 12px;
 }

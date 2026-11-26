@@ -1,97 +1,203 @@
+<script setup>
+import { computed } from 'vue'
+import { estado } from '../store'
+
+// Comparación de la interpretación actual (la que se acaba de analizar o se reabrió del historial).
+const resultados = computed(() => estado.resultados)
+// Primero las imágenes con región detectada, que son las que tienen máscara para comparar.
+const ordenados = computed(() =>
+  [...resultados.value].sort((a, b) => (b.respuesta.rois?.length || 0) - (a.respuesta.rois?.length || 0)),
+)
+
+const porcentaje = (valor = 0) => `${(valor * 100).toFixed(1)}%`
+// Los tres paneles comparten la proporción de la imagen original: original, máscara y
+// superposición quedan alineados píxel a píxel (la API devuelve las máscaras con esa proporción).
+const proporcion = (resultado) => {
+  const { imagen_ancho: ancho, imagen_alto: alto } = resultado.respuesta
+  return { aspectRatio: ancho && alto ? `${ancho} / ${alto}` : '4 / 3' }
+}
+const estiloROI = (roi) => ({
+  left: porcentaje(roi.x), top: porcentaje(roi.y), width: porcentaje(roi.ancho), height: porcentaje(roi.alto),
+})
+const clasificacion = (resultado) =>
+  resultado.respuesta.clasificacion === 'posible_region' ? 'Posible región de interés' : 'Sin hallazgos relevantes'
+</script>
+
 <template>
-    <!-- Contenedor y título de la pantalla de comparación. -->
-    <main class="page">
-        <p class="eyebrow">RESULTADOS / A-DEMO-003</p>
-        <h1>Comparación general</h1>
-        <p class="subhead">Comparación visual de imágenes originales, máscaras de segmentación y superposiciones de región.</p>
-        <!-- Tarjetas generadas con v-for: cada una muestra una imagen y su estimación. -->
-        <div class="compare-grid">
-            <article v-for="n in 3" :key="n" class="panel compare-card">
-                <!-- Imagen de muestra; el borde representa la región que se revisaría. -->
-                <div class="scope-large">
-                    <i></i>
-                    <span>Imagen {{ n }}</span>
-                </div>
-                <!-- La segunda tarjeta usa una clasificación de ejemplo distinta. -->
-                <h2>{{ n===2?'Sin hallazgos':'Posible región de interés' }}</h2>
-                <!-- Porcentaje y barra visual para comparar la confianza experimental. -->
-                <div class="confidence">
-                    <span>Confianza del modelo</span>
-                    <b>{{ n===2?'91.8':'94.2' }}%</b>
-                </div>
-                <div class="bar">
-                    <i></i>
-                </div>
-            </article>
+  <main class="page">
+    <p class="eyebrow">COMPARACIÓN <span>/</span> {{ estado.id || 'SIN INTERPRETACIÓN' }}</p>
+    <h1>Comparación visual</h1>
+    <p class="subhead">Imagen original, máscara de segmentación y superposición de la región, alineadas para cada imagen.</p>
+
+    <!-- Sin interpretación activa: se invita a analizar o a abrir una del historial. -->
+    <section v-if="!resultados.length" class="panel compare-empty">
+      <h2>No hay una interpretación para comparar</h2>
+      <p>Analiza imágenes o abre una interpretación guardada para ver la comparación.</p>
+      <div class="compare-actions">
+        <RouterLink class="button" to="/carga">Cargar imágenes</RouterLink>
+        <RouterLink class="button secondary" to="/historial">Abrir historial</RouterLink>
+      </div>
+    </section>
+
+    <article v-for="resultado in ordenados" v-else :key="resultado.respuesta.id" class="panel compare-row">
+      <header class="compare-head">
+        <div>
+          <h2 :title="resultado.nombre">{{ resultado.nombre }}</h2>
+          <p>{{ clasificacion(resultado) }} · Confianza del modelo {{ porcentaje(resultado.respuesta.confianza) }}</p>
         </div>
-        <!-- Recordatorio de que la comparación no es un diagnóstico. -->
-        <p class="disclaimer">Comparación experimental. La interpretación final debe realizarla un profesional de salud.</p>
-    </main>
+        <span class="tag" :class="{ found: resultado.respuesta.rois?.length }">
+          {{ resultado.respuesta.rois?.length || 0 }} {{ resultado.respuesta.rois?.length === 1 ? 'región' : 'regiones' }}
+        </span>
+      </header>
+
+      <div class="compare-grid">
+        <figure>
+          <div class="stage" :style="proporcion(resultado)">
+            <img :src="resultado.url" :alt="`Imagen original: ${resultado.nombre}`" />
+          </div>
+          <figcaption>Imagen original</figcaption>
+        </figure>
+
+        <figure>
+          <div class="stage mask-stage" :style="proporcion(resultado)">
+            <img v-if="resultado.respuesta.mascara_bn" :src="resultado.respuesta.mascara_bn"
+                 :alt="`Máscara de segmentación: ${resultado.nombre}`" />
+            <p v-else class="no-mask">
+              {{ resultado.respuesta.rois?.length ? 'El modelo actual no entrega máscara' : 'Sin región: máscara vacía' }}
+            </p>
+          </div>
+          <figcaption>Máscara de segmentación</figcaption>
+        </figure>
+
+        <figure>
+          <div class="stage" :style="proporcion(resultado)">
+            <img :src="resultado.url" alt="" />
+            <img v-if="resultado.respuesta.mascara_resultado" class="overlay" :src="resultado.respuesta.mascara_resultado"
+                 :alt="`Máscara superpuesta: ${resultado.nombre}`" />
+            <span v-for="(roi, indice) in resultado.respuesta.rois" :key="indice" class="roi" :style="estiloROI(roi)"></span>
+          </div>
+          <figcaption>Superposición (máscara y región)</figcaption>
+        </figure>
+      </div>
+    </article>
+
+    <!-- Recordatorio de que la comparación no es un diagnóstico. -->
+    <p class="disclaimer">Comparación experimental. La interpretación final debe realizarla un profesional de salud.</p>
+  </main>
 </template>
+
 <style scoped>
-/* Rejilla de las imágenes comparadas y sus tarjetas. */
+.compare-empty {
+  margin-top:23px;
+  padding:24px;
+  text-align:center;
+}
+.compare-empty h2 {
+  margin:0 0 6px;
+  color:var(--navy);
+  font-size:16px;
+}
+.compare-empty p {
+  margin:0;
+  color:var(--muted);
+  font-size:13px;
+}
+.compare-actions {
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin-top:16px;
+}
+.compare-row {
+  margin-top:18px;
+  padding:14px;
+}
+.compare-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:12px;
+}
+.compare-head h2 {
+  margin:0;
+  overflow:hidden;
+  color:var(--navy);
+  font-size:14px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.compare-head p {
+  margin:3px 0 0;
+  color:var(--muted);
+  font-size:12px;
+}
+.tag {
+  flex:none;
+  padding:4px 10px;
+  border-radius:20px;
+  background:#eef3f7;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:600;
+}
+.tag.found {
+  background:var(--amber-soft);
+  color:#7a4a12;
+}
 .compare-grid {
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:15px;
-  margin-top:23px;
+  gap:12px;
 }
-.compare-card {
-  padding:12px;
-}
-.compare-card .scope-large {
-  height:230px;
+figure {
   margin:0;
 }
-.compare-card h2 {
-  min-height:35px;
-  margin:13px 1px 10px;
-  color:var(--navy);
-  font-size:12px;
-}
-.confidence {
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
-  color:var(--muted);
-  font-size:10px;
-}
-.confidence b {
-  color:var(--navy);
-}
-.bar {
-  height:6px;
+.stage {
+  position:relative;
   overflow:hidden;
-  margin-top:8px;
-  border-radius:6px;
-  background:#e8f0f4;
+  border-radius:10px;
+  background:#0b1f33;
 }
-.bar i {
-  display:block;
-  width:64%;
+.stage img {
+  position:absolute;
+  inset:0;
+  width:100%;
   height:100%;
-  border-radius:inherit;
-  background:var(--brand);
+  object-fit:fill;
 }
-.compare-card:nth-child(2) .bar i {
-  width:91.8%;
-  background:var(--teal);
+.mask-stage {
+  display:grid;
+  place-items:center;
 }
-.compare-card:nth-child(3) .bar i {
-  width:76%;
-  background:#5f9cbc;
+.no-mask {
+  margin:0;
+  padding:12px;
+  color:#dbe7f1;
+  font-size:12px;
+  text-align:center;
 }
-@media (max-width:850px) {
-  .compare-grid {
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
+.overlay {
+  pointer-events:none;
 }
-@media (max-width:620px) {
+/* Trazo doble de la región: oscuro para tejido claro y halo cian para zonas oscuras (CP-14). */
+.roi {
+  position:absolute;
+  box-sizing:border-box;
+  border:2px solid #0b1f33;
+  border-radius:6px;
+  box-shadow:0 0 0 2px #05c5de;
+  pointer-events:none;
+}
+figcaption {
+  margin-top:6px;
+  color:var(--muted);
+  font-size:12px;
+  text-align:center;
+}
+@media (max-width:760px) {
   .compare-grid {
     grid-template-columns:1fr;
-  }
-  .compare-card .scope-large {
-    height:250px;
   }
 }
 </style>

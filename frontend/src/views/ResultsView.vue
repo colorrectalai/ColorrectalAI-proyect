@@ -151,6 +151,18 @@ onBeforeUnmount(cerrarVisor)
       </p>
     </header>
 
+    <!-- Imágenes que la API rechazó: el resto del lote se analizó igual (CF-02). -->
+    <section v-if="estado.fallidos?.length" class="rejected-files" role="alert">
+      <h2>
+        {{ estado.fallidos.length === 1 ? 'Una imagen no se pudo analizar' : `${estado.fallidos.length} imágenes no se pudieron analizar` }}
+      </h2>
+      <ul>
+        <li v-for="fallo in estado.fallidos" :key="fallo.nombre">
+          <strong>{{ fallo.nombre }}:</strong> {{ fallo.mensaje }}
+        </li>
+      </ul>
+    </section>
+
     <!-- Estado vacío para accesos directos o cuando aún no hay una interpretación. -->
     <section v-if="!resultados.length" class="empty-state">
       <FileImage aria-hidden="true" />
@@ -753,12 +765,35 @@ onBeforeUnmount(cerrarVisor)
   object-fit: contain;
 }
 
+/* Trazo doble: borde oscuro para contrastar con el tejido claro (≥ 3:1, CP-14) y halo cian
+   por fuera para que siga visible sobre zonas oscuras de la imagen. */
 .roi-box {
   position: absolute;
   box-sizing: border-box;
-  border: 2px solid #05c5de;
+  border: 2px solid #0b1f33;
   border-radius: 8px;
-  box-shadow: 0 0 0 2px rgb(5 197 222 / 15%);
+  box-shadow: 0 0 0 2px #05c5de, 0 0 0 3px rgb(11 31 51 / 55%);
+}
+
+.rejected-files {
+  margin: 0 0 18px;
+  padding: 14px 18px;
+  border: 1px solid #f0c9a6;
+  border-radius: 12px;
+  background: var(--amber-soft);
+  color: var(--ink);
+}
+
+.rejected-files h2 {
+  margin: 0 0 6px;
+  color: #7a4a12;
+  font-size: 14px;
+}
+
+.rejected-files ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
 }
 
 /* Con modelo de segmentación: imagen con ROI y máscara en blanco y negro, lado a lado. */
@@ -1171,9 +1206,9 @@ onBeforeUnmount(cerrarVisor)
 .general-roi-frame {
   position: absolute;
   z-index: 1;
-  border: 2px solid #08c9ed;
+  border: 2px solid #0b1f33;
   border-radius: 4px;
-  box-shadow: 0 0 0 1px rgb(2 23 45 / 40%), 0 0 12px rgb(0 197 255 / 55%);
+  box-shadow: 0 0 0 2px #08c9ed, 0 0 10px rgb(0 197 255 / 45%);
   pointer-events: none;
 }
 

@@ -11,13 +11,13 @@
   -webkit-font-smoothing: antialiased;
   --navy: #02172D;
   --navy-deep: #071e36;
-  --blue: #009DFF;
+  --blue: #0072BA; /* antes #009DFF: 2.9:1 sobre blanco; este cumple WCAG AA (≥ 4.5:1), CP-14 */
   --brand: var(--blue);
   --brand-bright: #00abf5;
   --brand-soft: #e7f7fc;
   --ink: #18324b;
-  --muted: #62778b;
-  --quiet: #8293a3;
+  --muted: #5d7184;
+  --quiet: #64717d;
   --line: #dce6ee;
   --surface: #fff;
   --canvas: #f3f8fd;
