@@ -2,17 +2,20 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '../components/AuthLayout.vue'
-import { activarPerfilLocal } from '../userProfile'
+import { iniciarSesion } from '../api'
+import { guardarSesion } from '../userProfile'
 
 const router = useRouter()
 // Valores controlados por v-model en los campos del formulario.
 const email = ref('')
 const password = ref('')
-// Mensaje de validación que se muestra debajo de los campos.
+// Mensaje de validación o del servidor que se muestra debajo de los campos.
 const error = ref('')
+// Evita enviar dos veces mientras el servidor responde.
+const sending = ref(false)
 
-// Valida que haya datos y simula el acceso; todavía no consulta un servidor.
-function submit() {
+// Valida que haya datos y comprueba el correo y la contraseña en el servidor.
+async function submit() {
   error.value = ''
 
   if (!email.value || !password.value) {
@@ -20,10 +23,15 @@ function submit() {
     return
   }
 
-  // Activa el nombre asociado al correo en este prototipo local.
-  activarPerfilLocal(email.value)
-  localStorage.setItem('colorrectalai-session', 'active')
-  router.push('/inicio')
+  sending.value = true
+  try {
+    guardarSesion(await iniciarSesion({ correo: email.value, contrasena: password.value }))
+    router.push('/inicio')
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
@@ -77,7 +85,7 @@ function submit() {
       </small>
 
       <!-- Acción principal para enviar las credenciales de acceso. -->
-      <button class="button" type="submit">Entrar a mi cuenta <span>→</span></button>
+      <button class="button" type="submit" :disabled="sending">{{ sending ? 'Verificando…' : 'Entrar a mi cuenta' }} <span>→</span></button>
 
       <!-- Enlace visual de recuperación; todavía no tiene una pantalla propia. -->
       <RouterLink class="forgot-link" to="/acceso">¿Olvidaste tu contraseña?</RouterLink>
