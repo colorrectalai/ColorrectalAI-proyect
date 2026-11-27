@@ -68,6 +68,7 @@ test('registro, sesión visible y cierre de sesión', async ({ page }) => {
   await page.goto('/registro')
   await page.locator('input[type="text"]').fill('Ana Ruiz')
   await page.locator('input[type="email"]').fill('ana@x.co')
+  await page.locator('select[name="userType"]').selectOption('Profesional')
   await page.locator('input[type="password"]').nth(0).fill('ClaveSegura123')
   await page.locator('input[type="password"]').nth(1).fill('ClaveSegura123')
   await page.locator('input[type="checkbox"]').check()
@@ -110,7 +111,6 @@ test.describe('responsive en celular (375 px)', () => {
   test.use({ viewport: { width: 375, height: 812 } })
   for (const ruta of RUTAS) {
     test(`${ruta}: sin desplazamiento horizontal`, async ({ page }) => {
-      if (ruta === '/inicio') test.fail(true, 'DEF-17: el panel /inicio se desborda en celular (defecto conocido, asignado a la interfaz)')
       await simularApi(page)
       await page.goto(ruta)
       const desborde = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

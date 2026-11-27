@@ -52,7 +52,7 @@ def test_sin_base_el_registro_responde_503(monkeypatch):
     db.reiniciar()
     with TestClient(crear_app(Config(), ModeloFalso())) as c:
         r = c.post("/api/v1/usuarios", json={"nombre": "Ana", "correo": "ana@x.co",
-                                              "contrasena": "12345678", "acepta_aviso": True})
+                                              "contrasena": "12345678", "acepta_aviso": True, "tipo_usuario": "Estudiante"})
     assert r.status_code == 503 and r.json()["error"]["codigo"] == "BASE_NO_DISPONIBLE"
 
 
@@ -125,11 +125,11 @@ def test_inferencia_queda_registrada_sin_imagen(cliente_bd):
 @requiere_bd
 def test_registro_inicio_y_sesion(cliente_bd):
     nuevo = {"nombre": "  Ana   María ", "correo": "Ana@Ejemplo.CO", "contrasena": "ClaveSegura123",
-             "acepta_aviso": True}
+             "acepta_aviso": True, "tipo_usuario": "Estudiante"}
     r = cliente_bd.post("/api/v1/usuarios", json=nuevo)
     assert r.status_code == 201
     assert r.json()["usuario"] == {"id": r.json()["usuario"]["id"], "nombre": "Ana María",
-                                   "correo": "ana@ejemplo.co"}
+                                   "correo": "ana@ejemplo.co", "tipo_usuario": "Estudiante"}
     guardado = _consulta("SELECT hash_contrasena FROM usuario")[0][0]
     assert "ClaveSegura123" not in guardado and guardado.startswith("scrypt$")
 
@@ -144,6 +144,7 @@ def test_registro_inicio_y_sesion(cliente_bd):
     assert ok.status_code == 200
     yo = cliente_bd.get("/api/v1/usuarios/yo", headers={"Authorization": "Bearer " + ok.json()["token"]})
     assert yo.status_code == 200 and yo.json()["correo"] == "ana@ejemplo.co"
+    assert yo.json()["tipo_usuario"] == "Estudiante"
     assert cliente_bd.get("/api/v1/usuarios/yo").status_code == 401
 
 
@@ -151,8 +152,10 @@ def test_registro_inicio_y_sesion(cliente_bd):
 @pytest.mark.parametrize("cambio,parte", [
     ({"correo": "sin-arroba"}, "correo"), ({"contrasena": "corta"}, "8"),
     ({"nombre": "A"}, "nombre"), ({"acepta_aviso": False}, "aviso"),
+    ({"tipo_usuario": None}, "tipo de usuario"), ({"tipo_usuario": "Administrador"}, "tipo de usuario"),
+    ({"tipo_usuario": "estudiante"}, "tipo de usuario"),
 ])
 def test_registro_valida_los_datos(cliente_bd, cambio, parte):
-    datos = {"nombre": "Ana", "correo": "ana@x.co", "contrasena": "ClaveSegura123", "acepta_aviso": True}
+    datos = {"nombre": "Ana", "correo": "ana@x.co", "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"}
     r = cliente_bd.post("/api/v1/usuarios", json={**datos, **cambio})
     assert r.status_code == 422 and parte in r.json()["error"]["mensaje"]

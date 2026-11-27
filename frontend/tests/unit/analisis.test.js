@@ -76,7 +76,8 @@ describe('LoadingView', () => {
     await montar(LoadingView, '/analizando'); await flushPromises()
     expect(estado.resultados.map((r) => r.nombre)).toEqual(['a.png', 'c.png'])
     expect(estado.fallidos).toEqual([{ nombre: 'mala.png', mensaje: 'Formato no admitido.' }])
-    expect(estado.archivos.map((f) => f.name)).toEqual(['a.png', 'c.png'])
+    // Al terminar se vacía la selección para la próxima carga (los resultados quedan en estado.resultados).
+    expect(estado.archivos).toEqual([])
   })
   it('si todas fallan, muestra el error y no navega', async () => {
     api.analizarImagen.mockRejectedValue(new Error('El servidor tardó demasiado.'))

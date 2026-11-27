@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Eye, EyeOff } from '@lucide/vue'
 import AuthLayout from '../components/AuthLayout.vue'
 import { registrarUsuario } from '../api'
-import { guardarSesion, guardarTipoUsuario } from '../userProfile'
+import { guardarSesion } from '../userProfile'
 
 const router = useRouter()
 // Datos escritos por la persona durante la creación de su perfil.
@@ -50,10 +50,10 @@ async function submit() {
     guardarSesion(await registrarUsuario({
       nombre: name.value,
       correo: email.value,
+      tipoUsuario: userType.value,
       contrasena: password.value,
       aceptaAviso: legalAccepted.value,
     }))
-    guardarTipoUsuario(userType.value)
     router.push('/inicio')
   } catch (e) {
     error.value = e.message
