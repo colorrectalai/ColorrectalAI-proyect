@@ -52,6 +52,7 @@ class NuevoUsuario(BaseModel):
     nombre: str = Field(max_length=200)
     correo: str = Field(max_length=200)
     contrasena: str = Field(max_length=256)
+    tipo_usuario: str | None = Field(None, max_length=40)
     acepta_aviso: bool = False
 
 
@@ -64,6 +65,7 @@ class Usuario(BaseModel):
     id: int
     nombre: str
     correo: str
+    tipo_usuario: str
 
 
 class Sesion(BaseModel):
