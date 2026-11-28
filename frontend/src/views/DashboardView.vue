@@ -3,7 +3,8 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Activity, ArrowRight, FileImage, ScanSearch, Info } from '@lucide/vue'
 import InterpretationHistoryTable from '../components/InterpretationHistoryTable.vue'
-import { descargarResumen, listarInterpretaciones, restaurarInterpretacion } from '../history'
+import { listarInterpretaciones, obtenerInterpretacion, restaurarInterpretacion } from '../history'
+import { descargarInformePdf } from '../reports/pdfReport'
 import { workflowSteps } from '../data/workflowSteps'
 
 const router = useRouter()
@@ -11,6 +12,7 @@ const historyEntries = ref([])
 const recent = computed(() => historyEntries.value.slice(0, 3))
 const recentLoading = ref(true)
 const historyError = ref('')
+const descargandoPdfId = ref('')
 
 // Nombre de muestra para el prototipo; si hay un nombre guardado, se usa en el saludo.
 const firstName = computed(() => {
@@ -54,6 +56,22 @@ const openInterpretation = async (item) => {
     await router.push({ name: 'results', params: { id: item.id } })
   } catch (error) {
     historyError.value = error.message || 'No se pudo abrir esta interpretación.'
+  }
+}
+
+// El dashboard usa el mismo informe PDF que el historial completo.
+const downloadInterpretation = async (item) => {
+  if (descargandoPdfId.value) return
+  historyError.value = ''
+  descargandoPdfId.value = item.id
+  try {
+    const interpretacion = await obtenerInterpretacion(item.id)
+    if (!interpretacion) throw new Error('No se encontró esta interpretación en el historial local.')
+    await descargarInformePdf(interpretacion)
+  } catch (error) {
+    historyError.value = error.message || 'No se pudo generar el informe PDF.'
+  } finally {
+    descargandoPdfId.value = ''
   }
 }
 
@@ -153,11 +171,13 @@ onUnmounted(() => revealObserver?.disconnect())
           <InterpretationHistoryTable
             :items="recent"
             :loading="recentLoading"
+            :downloading-id="descargandoPdfId"
+            download-label="Descargar resultados PDF"
             :empty-title="historyError ? 'No se pudo cargar el historial' : 'Aún no hay interpretaciones guardadas'"
             :empty-description="historyError ? 'Comprueba el almacenamiento local e inténtalo de nuevo.' : 'Tus análisis completados aparecerán aquí.'"
             empty-to="/carga"
             @open="openInterpretation"
-            @download="descargarResumen"
+            @download="downloadInterpretation"
           />
         </div>
       </section>

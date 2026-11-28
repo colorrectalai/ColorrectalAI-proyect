@@ -63,14 +63,14 @@ onUnmounted(() => {
       </RouterLink>
       <!-- En escritorio se conserva la navegación horizontal original. -->
       <nav v-if="loggedInView" aria-label="Navegación principal">
-        <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }"><House :size="17" aria-hidden="true" /><span>Inicio</span></RouterLink>
-        <RouterLink to="/carga" :class="{ active: ['/carga', '/analizando', '/resultados', '/comparacion'].some(path => route.path.startsWith(path)) }"><ScanSearch :size="17" aria-hidden="true" /><span>Interpretación</span></RouterLink>
-        <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }"><History :size="17" aria-hidden="true" /><span>Historial</span></RouterLink>
+        <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }"><House :size="18" aria-hidden="true" /><span>Inicio</span></RouterLink>
+        <RouterLink to="/carga" :class="{ active: ['/carga', '/analizando', '/resultados', '/comparacion'].some(path => route.path.startsWith(path)) }"><ScanSearch :size="18" aria-hidden="true" /><span>Interpretación</span></RouterLink>
+        <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }"><History :size="18" aria-hidden="true" /><span>Historial</span></RouterLink>
       </nav>
       <nav v-else aria-label="Navegación principal">
-        <RouterLink to="/#acerca"><CircleHelp :size="17" aria-hidden="true" /><span>Acerca de</span></RouterLink>
-        <RouterLink to="/acceso"><LogIn :size="17" aria-hidden="true" /><span>Iniciar sesión</span></RouterLink>
-        <RouterLink class="button" to="/registro"><UserRoundPlus :size="17" aria-hidden="true" /><span>Crear cuenta</span></RouterLink>
+        <RouterLink to="/#acerca"><CircleHelp :size="18" aria-hidden="true" /><span>Acerca de</span></RouterLink>
+        <RouterLink to="/acceso"><LogIn :size="18" aria-hidden="true" /><span>Iniciar sesión</span></RouterLink>
+        <RouterLink class="button" to="/registro"><UserRoundPlus :size="18" aria-hidden="true" /><span>Crear cuenta</span></RouterLink>
       </nav>
       <!-- Perfil desplegable con opción para cerrar la sesión de demostración. -->
       <div v-if="loggedInView" ref="profileMenu" class="profile-menu" @keydown.esc.stop="profileMenuOpen = false">
@@ -125,16 +125,16 @@ onUnmounted(() => {
           </div>
 
           <div v-if="loggedInView" class="drawer-links">
-            <RouterLink to="/" :class="{ active: route.path === '/' }" @click="navigationOpen = false"><Info :size="19" aria-hidden="true" /><span>ColorrectalAI</span></RouterLink>
-            <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }" @click="navigationOpen = false"><House :size="19" aria-hidden="true" /><span>Inicio</span></RouterLink>
-            <RouterLink to="/carga" :class="{ active: ['/carga', '/analizando', '/resultados', '/comparacion'].some(path => route.path.startsWith(path)) }" @click="navigationOpen = false"><ScanSearch :size="19" aria-hidden="true" /><span>Interpretación</span></RouterLink>
-            <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }" @click="navigationOpen = false"><History :size="19" aria-hidden="true" /><span>Historial</span></RouterLink>
+            <RouterLink to="/" :class="{ active: route.path === '/' }" @click="navigationOpen = false"><Info :size="20" aria-hidden="true" /><span>ColorrectalAI</span></RouterLink>
+            <RouterLink to="/inicio" :class="{ active: route.path === '/inicio' }" @click="navigationOpen = false"><House :size="20" aria-hidden="true" /><span>Inicio</span></RouterLink>
+            <RouterLink to="/carga" :class="{ active: ['/carga', '/analizando', '/resultados', '/comparacion'].some(path => route.path.startsWith(path)) }" @click="navigationOpen = false"><ScanSearch :size="20" aria-hidden="true" /><span>Interpretación</span></RouterLink>
+            <RouterLink to="/historial" :class="{ active: route.path.startsWith('/historial') }" @click="navigationOpen = false"><History :size="20" aria-hidden="true" /><span>Historial</span></RouterLink>
           </div>
 
           <div v-else class="drawer-links">
-            <RouterLink to="/#acerca" @click="navigationOpen = false"><Info :size="19" aria-hidden="true" /><span>Acerca de</span></RouterLink>
-            <RouterLink to="/acceso" @click="navigationOpen = false"><LogIn :size="19" aria-hidden="true" /><span>Iniciar sesión</span></RouterLink>
-            <RouterLink to="/registro" @click="navigationOpen = false"><UserRoundPlus :size="19" aria-hidden="true" /><span>Crear cuenta</span></RouterLink>
+            <RouterLink to="/#acerca" @click="navigationOpen = false"><Info :size="20" aria-hidden="true" /><span>Acerca de</span></RouterLink>
+            <RouterLink to="/acceso" @click="navigationOpen = false"><LogIn :size="20" aria-hidden="true" /><span>Iniciar sesión</span></RouterLink>
+            <RouterLink to="/registro" @click="navigationOpen = false"><UserRoundPlus :size="20" aria-hidden="true" /><span>Crear cuenta</span></RouterLink>
           </div>
         </nav>
       </div>
@@ -144,10 +144,13 @@ onUnmounted(() => {
 
 <style scoped>
 /* Fondo, altura y alineación del encabezado compartido. */
-.navigation-shell { position: relative; }
-.topbar {
+.navigation-shell {
   position: sticky;
   top: 0;
+  z-index: 1000;
+}
+.topbar {
+  position: relative;
   z-index: 1000;
   width: 100%;
   box-sizing: border-box;
@@ -191,9 +194,9 @@ onUnmounted(() => {
   align-items:center;
   gap:7px;
   color:var(--canvas);
-  font-size:14px;
+  font-size:15px;
   text-decoration:none;
-  padding:10px 12px;
+  padding:11px 13px;
   border-radius:15px;
   transition:background .15s ease,color .15s ease;
   white-space:nowrap;
@@ -276,12 +279,12 @@ onUnmounted(() => {
   display:flex;
   align-items:center;
   gap:14px;
-  min-height:54px;
-  padding:0 14px;
+  min-height:58px;
+  padding:0 16px;
   border:1px solid transparent;
   border-radius:12px;
   color:#e8f4ff;
-  font-size:15px;
+  font-size:16px;
   font-weight:500;
   text-decoration:none;
   transition:background-color .16s ease, border-color .16s ease, color .16s ease;

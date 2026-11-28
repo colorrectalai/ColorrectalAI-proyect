@@ -73,11 +73,16 @@
 
     <!-- Presentación breve del propósito y la tecnología del proyecto. -->
     <section class="public-band project-band" id="acerca" aria-labelledby="project-title">
-      <img class="big-logo" src="/img/LogoColorrectalAI.png" alt="logo del proyecto" />
-      <div class="project-inner">
-        <div class="project-copy">
-          <h2 id="project-title">¿Qué es ColorrectalAI?</h2>
-          <p>ColorrectalAI es una herramienta académica experimental de asistencia analítica que utiliza un modelo de inteligencia artificial basado en arquitectura YOLO para procesar imágenes de colonoscopia. El sistema busca identificar regiones de interés (ROI), estimar probabilidades asociadas a sus salidas y mostrar métricas experimentales de confianza para facilitar su exploración visual.</p>
+      <div class="project-content">
+        <video class="project-video" poster="/img/Fondo3.png" controls preload="metadata" playsinline aria-label="Video de presentación del proyecto ColorrectalAI">
+          <source src="/videos/presentacion-colorrectalai.mp4" type="video/mp4" />
+          Tu navegador no admite la reproducción de video.
+        </video>
+        <div class="project-inner">
+          <div class="project-copy">
+            <h2 id="project-title">¿Qué es ColorrectalAI?</h2>
+            <p>ColorrectalAI es una herramienta académica experimental de asistencia analítica que utiliza un modelo de inteligencia artificial basado en arquitectura YOLO para procesar imágenes de colonoscopia. El sistema busca identificar regiones de interés (ROI), estimar probabilidades asociadas a sus salidas y mostrar métricas experimentales de confianza para facilitar su exploración visual.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -445,7 +450,11 @@ const resultLimits = [
 }
 .project-band {
   scroll-margin-top: 96px;
-  height: 400px;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  height: auto;
+  padding: 40px clamp(28px, 5vw, 72px);
   position: relative;   /* Referencia para atrapar al pseudoelemento */
   isolation: isolate;   /* Evita que el fondo se esconda detrás del body */
   overflow: hidden;     /* Recorta los bordes blancos que deja el desenfoque */
@@ -460,22 +469,33 @@ const resultLimits = [
   filter: blur(1px);
   opacity: 0.3;
 }
+.project-content {
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 72px);
+  width: min(1296px, 100%);
+  margin: 0 auto;
+}
 .project-inner {
-  display: flex;             /* 👈 Activa align-items y justify-content */
-  flex-direction: column;    /* 👈 Mantiene los textos uno debajo del otro */
-  justify-content: center;   /* 👈 Centra el contenido de arriba a abajo */
-  align-items: flex-start;   /* 👈 Mantiene el texto alineado a la izquierda (usa 'center' si lo quieres centrado) */
-
-  width: 500px;
-  height: 100%;
-  margin-left: 720px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0;
 }
 
 .big-logo {
-  position: absolute;
-  height: 300px;
-  margin-top: 50px;
-  margin-left: 200px;
+  position: relative;
+  display: block;
+  width: min(100%, 220px);
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
 }
 .project-brand-panel :deep(.brand-emblem) {
   width: 56px;
@@ -493,6 +513,10 @@ const resultLimits = [
 }
 .project-copy h2 {
   color: #fff;
+}
+.project-copy {
+  width: 100%;
+  text-align: left;
 }
 .exploration-inner {
   padding: 43px 0 50px;
@@ -614,14 +638,15 @@ const resultLimits = [
 @media (max-width: 850px) {
 
   .cancer-inner { grid-template-columns: 1fr 1fr; gap: 24px; }
-  .project-inner, .limits-inner { gap: 28px; }
+  .project-content { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+  .project-inner { gap: 18px; }
+  .limits-inner { gap: 28px; }
   .exploration-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 620px) {
 
-  .cancer-inner, .project-inner, .limits-inner { grid-template-columns: 1fr; }
+  .cancer-inner, .limits-inner { grid-template-columns: 1fr; }
   .cancer-inner { gap: 24px; padding: 32px 0; }
-  .project-inner { gap: 22px; padding: 28px 0; }
   .project-band { scroll-margin-top: 120px; }
   .project-brand-panel { min-height: 125px; }
   .exploration-inner { padding: 32px 0 36px; }
@@ -682,12 +707,25 @@ const resultLimits = [
   text-decoration: none;
   font-size: 12px;
 }
-.project-copy > p:last-child {
+.project-copy > p {
   max-width: 720px;
   margin: 13px 0 0;
   color: #d5e2f0;
   line-height: 1.65;
   font-size: 17px;
+}
+.project-video {
+  display: block;
+  justify-self: center;
+  width: min(100%, 720px);
+  min-width: 0;
+  aspect-ratio: 16 / 9;
+  margin: 0;
+  border: 1px solid rgb(129 197 238 / 38%);
+  border-radius: 12px;
+  background: #00152b;
+  box-shadow: 0 16px 38px rgb(0 9 24 / 28%);
+  object-fit: contain;
 }
 .exploration-heading > p {
   max-width: 500px;
@@ -793,6 +831,9 @@ const resultLimits = [
   margin: 0;
   padding: 0;
 }
+.public-band.project-band {
+  padding: 48px clamp(28px, 5vw, 72px);
+}
 @media (max-width: 900px) {
   .public-home { --home-gutter: 24px; }
   .home-hero-inner {
@@ -853,16 +894,12 @@ const resultLimits = [
     min-width: 0;
     text-align: center;
   }
-  .project-band {
-    display: grid;
-    grid-template-columns: minmax(180px, .72fr) minmax(0, 1.28fr);
-    align-items: center;
-    gap: 24px;
-    height: auto;
-    min-height: 280px;
-    padding: 32px 0;
+  .public-band.project-band {
+    min-height: 0;
+    padding: 36px 24px;
   }
-  .big-logo { position: relative; display: block; width: min(230px, 100%); height: auto; margin: 0 auto; }
+  .project-content { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+  .big-logo { width: min(180px, 78%); }
   .project-inner { width: 100%; height: auto; margin: 0; }
   .exploration-grid { height: auto; grid-auto-rows: 1fr; }
 }
@@ -878,12 +915,14 @@ const resultLimits = [
   .hero-features { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .hero-feature { font-size: 12px; }
   .cancer-inner, .limits-inner { grid-template-columns: minmax(0, 1fr); }
-  .project-band { grid-template-columns: minmax(0, 1fr); min-height: 0; gap: 12px; padding: 28px 0 32px; }
-  .big-logo { width: min(190px, 56vw); margin-bottom: 4px; }
-  .project-inner { width: calc(100% - 30px); margin-inline: auto; text-align: left; }
+  .public-band.project-band { min-height: 0; padding: 32px 15px; }
+  .project-content { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .big-logo { width: min(160px, 48vw); margin: 0 auto; }
+  .project-inner { width: 100%; margin: 0; gap: 14px; text-align: left; }
+  .project-copy { text-align: left; }
   .cancer-image-responsive { width: min(68%, 245px); max-height: 185px; margin: 14px auto 6px; }
   .cancer-copy h2, .project-copy h2, .exploration-heading h2, .limits-intro h2 { font-size: 25px; }
-  .cancer-copy > p:not(.section-eyebrow):not(.symptom-note), .project-copy > p:last-child { font-size: 15px; }
+  .cancer-copy > p:not(.section-eyebrow):not(.symptom-note), .project-copy > p { font-size: 15px; }
   .symptom-list { font-size: 14px; }
   .exploration-grid { height: auto; grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; gap: 12px; padding-top: 14px; }
   .exploration-card { min-height: 0; height: auto; padding: 16px; }
