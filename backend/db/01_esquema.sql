@@ -219,6 +219,11 @@ CREATE TABLE IF NOT EXISTS usuario (
     CONSTRAINT ck_usuario_correo_minusculas CHECK (correo = LOWER(correo))
 );
 
+-- Tipo de usuario elegido al registrarse. Se agrega con ALTER para que las bases ya creadas
+-- (producción) también lo reciban; las cuentas anteriores quedan como 'Otro'.
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS tipo_usuario VARCHAR(20) NOT NULL DEFAULT 'Otro'
+    CONSTRAINT ck_usuario_tipo CHECK (tipo_usuario IN ('Estudiante', 'Profesional', 'Otro'));
+
 -- 6. Índices de consulta
 CREATE INDEX IF NOT EXISTS ix_asignacion_paciente ON asignacion_particion(id_paciente);
 CREATE INDEX IF NOT EXISTS ix_solicitud_error_fecha ON solicitud_inferencia(id_error, fecha_hora);

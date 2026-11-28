@@ -74,8 +74,8 @@ async function enviarJSON(ruta, cuerpo, token) {
 }
 
 // Crea la cuenta y devuelve la sesión: { token, expira_en_s, usuario: { id, nombre, correo } }
-export function registrarUsuario({ nombre, correo, contrasena, aceptaAviso }) {
-  return enviarJSON('/api/v1/usuarios', { nombre, correo, contrasena, acepta_aviso: aceptaAviso })
+export function registrarUsuario({ nombre, correo, tipoUsuario, contrasena, aceptaAviso }) {
+  return enviarJSON('/api/v1/usuarios', { nombre, correo, tipo_usuario: tipoUsuario, contrasena, acepta_aviso: aceptaAviso })
 }
 
 // Inicia sesión con correo y contraseña; devuelve la misma forma que registrarUsuario.
@@ -83,7 +83,7 @@ export function iniciarSesion({ correo, contrasena }) {
   return enviarJSON('/api/v1/sesiones', { correo, contrasena })
 }
 
-// Comprueba que el token siga vigente y devuelve { id, nombre, correo }.
+// Comprueba que el token siga vigente y devuelve { id, nombre, correo, tipo_usuario }.
 export function usuarioActual(token) {
   return enviarJSON('/api/v1/usuarios/yo', undefined, token)
 }

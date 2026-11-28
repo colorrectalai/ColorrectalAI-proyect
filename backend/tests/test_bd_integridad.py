@@ -79,6 +79,30 @@ def test_correo_duplicado_se_rechaza_en_la_base(cliente_bd):
 
 
 @requiere_bd
+def test_tipo_usuario_invalido_se_rechaza_en_la_base(cliente_bd):
+    falla("INSERT INTO usuario (correo, nombre_completo, tipo_usuario, hash_contrasena, acepto_aviso_en)"
+          " VALUES ('tipo@x.co', 'Ana', 'Administrador', 'h', now())")
+
+
+@requiere_bd
+def test_tipo_usuario_por_defecto_es_otro(cliente_bd):
+    ejecutar("INSERT INTO usuario (correo, nombre_completo, hash_contrasena, acepto_aviso_en)"
+             " VALUES ('viejo@x.co', 'Ana', 'h', now())")
+    assert ejecutar("SELECT tipo_usuario FROM usuario WHERE correo='viejo@x.co'") == [("Otro",)]
+
+
+@requiere_bd
+def test_migracion_agrega_tipo_usuario_a_una_base_existente(cliente_bd):
+    """Simula la base de producción creada antes de la columna: el arranque debe agregarla."""
+    ejecutar("INSERT INTO usuario (correo, nombre_completo, hash_contrasena, acepto_aviso_en)"
+             " VALUES ('antes@x.co', 'Ana', 'h', now())")
+    ejecutar("ALTER TABLE usuario DROP COLUMN tipo_usuario")
+    assert db.preparar(SHA_FALSO, "prueba-0.1")
+    assert ejecutar("SELECT tipo_usuario FROM usuario WHERE correo='antes@x.co'") == [("Otro",)]
+    falla("UPDATE usuario SET tipo_usuario = 'X' WHERE correo='antes@x.co'")
+
+
+@requiere_bd
 def test_solo_puede_haber_un_modelo_activo(cliente_bd):
     falla("INSERT INTO version_modelo (id_experimento, nombre, version, formato, sha256_pesos, url_release,"
           " fecha_publicacion, estado) SELECT id_experimento, 'Otro', 'x', 'onnx', :sha, 'u', now(), 'activo'"
@@ -149,7 +173,7 @@ def test_catalogo_de_errores_coincide_con_los_codigos_de_la_api(cliente_bd):
                                     "' OR '1'='1", "Ana \"comillas\" ; DELETE"])
 def test_nombre_malicioso_se_guarda_literal_y_no_se_ejecuta(cliente_bd, nombre):
     r = cliente_bd.post("/api/v1/usuarios", json={"nombre": nombre, "correo": "x@x.co",
-                                                  "contrasena": "ClaveSegura123", "acepta_aviso": True})
+                                                  "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"})
     assert r.status_code == 201 and r.json()["usuario"]["nombre"] == nombre
     assert ejecutar("SELECT count(*) FROM usuario")[0][0] == 1          # la tabla sigue existiendo
     assert ejecutar("SELECT nombre_completo FROM usuario")[0][0] == nombre
@@ -159,7 +183,7 @@ def test_nombre_malicioso_se_guarda_literal_y_no_se_ejecuta(cliente_bd, nombre):
 @pytest.mark.parametrize("correo", ["' OR 1=1 --@x.co", "a@x.co' OR '1'='1", "admin'--@x.co"])
 def test_login_con_inyeccion_en_el_correo_no_entra(cliente_bd, correo):
     cliente_bd.post("/api/v1/usuarios", json={"nombre": "Ana", "correo": "ana@x.co",
-                                              "contrasena": "ClaveSegura123", "acepta_aviso": True})
+                                              "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"})
     r = cliente_bd.post("/api/v1/sesiones", json={"correo": correo, "contrasena": "x' OR '1'='1"})
     assert r.status_code == 401
 
@@ -171,7 +195,7 @@ def test_registros_simultaneos_con_el_mismo_correo_crean_una_sola_cuenta(cliente
 
     def registrar():
         r = cliente_bd.post("/api/v1/usuarios", json={"nombre": "Ana", "correo": "carrera@x.co",
-                                                      "contrasena": "ClaveSegura123", "acepta_aviso": True})
+                                                      "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"})
         codigos.append(r.status_code)
     hilos = [threading.Thread(target=registrar) for _ in range(6)]
     [h.start() for h in hilos]; [h.join() for h in hilos]
@@ -193,7 +217,7 @@ def test_registro_operacional_es_atomico(cliente_bd, monkeypatch):
 @requiere_bd
 def test_ultimo_acceso_se_actualiza_al_iniciar_sesion(cliente_bd):
     cliente_bd.post("/api/v1/usuarios", json={"nombre": "Ana", "correo": "t@x.co",
-                                              "contrasena": "ClaveSegura123", "acepta_aviso": True})
+                                              "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"})
     ejecutar("UPDATE usuario SET ultimo_acceso = now() - interval '1 day'")
     cliente_bd.post("/api/v1/sesiones", json={"correo": "t@x.co", "contrasena": "ClaveSegura123"})
     assert ejecutar("SELECT ultimo_acceso > now() - interval '1 minute' FROM usuario")[0][0]
@@ -202,7 +226,7 @@ def test_ultimo_acceso_se_actualiza_al_iniciar_sesion(cliente_bd):
 @requiere_bd
 def test_usuario_desactivado_no_puede_entrar_ni_usar_su_token(cliente_bd):
     r = cliente_bd.post("/api/v1/usuarios", json={"nombre": "Ana", "correo": "off@x.co",
-                                                  "contrasena": "ClaveSegura123", "acepta_aviso": True})
+                                                  "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"})
     token = r.json()["token"]
     ejecutar("UPDATE usuario SET activo = false")
     assert cliente_bd.post("/api/v1/sesiones", json={"correo": "off@x.co", "contrasena": "ClaveSegura123"}).status_code == 401
@@ -212,7 +236,7 @@ def test_usuario_desactivado_no_puede_entrar_ni_usar_su_token(cliente_bd):
 @requiere_bd
 def test_token_de_usuario_borrado_no_sirve(cliente_bd):
     r = cliente_bd.post("/api/v1/usuarios", json={"nombre": "Ana", "correo": "del@x.co",
-                                                  "contrasena": "ClaveSegura123", "acepta_aviso": True})
+                                                  "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"})
     ejecutar("DELETE FROM usuario")
     assert cliente_bd.get("/api/v1/usuarios/yo", headers={"Authorization": "Bearer " + r.json()["token"]}).status_code == 401
 
@@ -221,7 +245,7 @@ def test_token_de_usuario_borrado_no_sirve(cliente_bd):
 @pytest.mark.parametrize("limite,campo,ok", [(120, "nombre", True), (121, "nombre", False),
                                              (128, "contrasena", True), (129, "contrasena", False)])
 def test_limites_exactos_del_registro(cliente_bd, limite, campo, ok):
-    datos = {"nombre": "Ana", "correo": "lim@x.co", "contrasena": "ClaveSegura123", "acepta_aviso": True}
+    datos = {"nombre": "Ana", "correo": "lim@x.co", "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"}
     datos[campo] = "a" * limite
     r = cliente_bd.post("/api/v1/usuarios", json=datos)
     assert r.status_code == (201 if ok else 422)
@@ -247,7 +271,7 @@ def test_base_caida_la_inferencia_sigue_funcionando(cliente_base_caida):
 
 
 @pytest.mark.parametrize("ruta,cuerpo", [
-    ("/api/v1/usuarios", {"nombre": "Ana", "correo": "a@x.co", "contrasena": "ClaveSegura123", "acepta_aviso": True}),
+    ("/api/v1/usuarios", {"nombre": "Ana", "correo": "a@x.co", "contrasena": "ClaveSegura123", "acepta_aviso": True, "tipo_usuario": "Estudiante"}),
     ("/api/v1/sesiones", {"correo": "a@x.co", "contrasena": "ClaveSegura123"})])
 def test_base_caida_usuarios_responde_503_claro(cliente_base_caida, ruta, cuerpo):
     r = cliente_base_caida.post(ruta, json=cuerpo)

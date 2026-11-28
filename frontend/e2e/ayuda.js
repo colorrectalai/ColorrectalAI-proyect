@@ -25,7 +25,7 @@ export async function simularApi(page, modo = 'normal') {
     }
     if (url.endsWith('/api/v1/usuarios')) {
       const d = req.postDataJSON()
-      return route.fulfill({ status: 201, json: { token: 'a.b', tipo: 'bearer', expira_en_s: 3600, usuario: { id: 1, nombre: d.nombre, correo: d.correo } } })
+      return route.fulfill({ status: 201, json: { token: 'a.b', tipo: 'bearer', expira_en_s: 3600, usuario: { id: 1, nombre: d.nombre, correo: d.correo, tipo_usuario: d.tipo_usuario } } })
     }
     if (url.endsWith('/api/v1/sesiones')) {
       const d = req.postDataJSON()

@@ -15,13 +15,9 @@ export function guardarSesion(sesion) {
   localStorage.setItem(CLAVE_VENCE, String(Date.now() + sesion.expira_en_s * 1000))
   localStorage.setItem('colorrectalai-user-email', sesion.usuario.correo)
   localStorage.setItem('colorrectalai-user-name', sesion.usuario.nombre)
+  if (sesion.usuario.tipo_usuario) localStorage.setItem('colorrectalai-user-type', sesion.usuario.tipo_usuario)
   localStorage.setItem(CLAVE_SESION, 'active')
   sesionActiva.value = true
-}
-
-// Conserva el tipo seleccionado en el perfil local mientras la API no lo incluya en su contrato.
-export function guardarTipoUsuario(tipoUsuario) {
-  if (tipoUsuario) localStorage.setItem('colorrectalai-user-type', tipoUsuario)
 }
 
 // Token vigente o null si no hay sesión o ya venció.

@@ -35,6 +35,6 @@ describe('userProfile', () => {
   it('limpiarPerfilActivo borra todos los datos de la sesión', () => {
     guardarSesion(sesion()); limpiarPerfilActivo()
     for (const k of ['colorrectalai-token', 'colorrectalai-token-vence', 'colorrectalai-user-email',
-      'colorrectalai-user-name', 'colorrectalai-session']) expect(localStorage.getItem(k)).toBeNull()
+      'colorrectalai-user-name', 'colorrectalai-user-type', 'colorrectalai-session']) expect(localStorage.getItem(k)).toBeNull()
   })
 })

@@ -19,7 +19,8 @@ from .seguridad import HASH_RELLENO, crear_token, hash_contrasena, leer_token, v
 router = APIRouter(prefix="/api/v1", tags=["usuarios"])
 
 _CORREO = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
-_SQL_USUARIO = "SELECT id_usuario, nombre_completo, correo, hash_contrasena, activo FROM usuario "
+TIPOS_USUARIO = ("Estudiante", "Profesional", "Otro")
+_SQL_USUARIO = "SELECT id_usuario, nombre_completo, correo, tipo_usuario, hash_contrasena, activo FROM usuario "
 
 
 def _engine():
@@ -38,10 +39,14 @@ def _normalizar_correo(correo: str) -> str:
     return correo.strip().lower()
 
 
+def _usuario(fila) -> Usuario:
+    return Usuario(id=fila.id_usuario, nombre=fila.nombre_completo, correo=fila.correo,
+                   tipo_usuario=fila.tipo_usuario)
+
+
 def _sesion(fila) -> Sesion:
     token, vigencia = crear_token(fila.id_usuario)
-    return Sesion(token=token, expira_en_s=vigencia,
-                  usuario=Usuario(id=fila.id_usuario, nombre=fila.nombre_completo, correo=fila.correo))
+    return Sesion(token=token, expira_en_s=vigencia, usuario=_usuario(fila))
 
 
 def _registrar(datos: NuevoUsuario) -> Sesion:
@@ -54,16 +59,18 @@ def _registrar(datos: NuevoUsuario) -> Sesion:
         raise _datos_invalidos("Escriba un correo electrónico válido.")
     if not 8 <= len(datos.contrasena) <= 128:
         raise _datos_invalidos("La contraseña debe tener entre 8 y 128 caracteres.")
+    if datos.tipo_usuario not in TIPOS_USUARIO:
+        raise _datos_invalidos("Seleccione el tipo de usuario: Estudiante, Profesional u Otro.")
     if not datos.acepta_aviso:
         raise _datos_invalidos("Debe aceptar el aviso legal para crear la cuenta.")
     clave = hash_contrasena(datos.contrasena)
     try:
         with _engine().begin() as c:
             fila = c.execute(text(
-                "INSERT INTO usuario (correo, nombre_completo, hash_contrasena, acepto_aviso_en, ultimo_acceso) "
-                "VALUES (:correo, :nombre, :clave, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
-                "RETURNING id_usuario, nombre_completo, correo"),
-                {"correo": correo, "nombre": nombre, "clave": clave}).one()
+                "INSERT INTO usuario (correo, nombre_completo, tipo_usuario, hash_contrasena, acepto_aviso_en, "
+                "ultimo_acceso) VALUES (:correo, :nombre, :tipo, :clave, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
+                "RETURNING id_usuario, nombre_completo, correo, tipo_usuario"),
+                {"correo": correo, "nombre": nombre, "tipo": datos.tipo_usuario, "clave": clave}).one()
     except IntegrityError:
         raise ErrorAPI(409, "CORREO_REGISTRADO", "Ya existe una cuenta con ese correo. Inicie sesión.")
     except OperationalError:
@@ -98,7 +105,7 @@ def _yo(autorizacion: str | None) -> Usuario:
         fila = c.execute(text(_SQL_USUARIO + "WHERE id_usuario = :id"), {"id": id_usuario}).first()
     if not fila or not fila.activo:
         raise ErrorAPI(401, "SESION_INVALIDA", "La sesión no es válida o ya expiró. Inicie sesión de nuevo.")
-    return Usuario(id=fila.id_usuario, nombre=fila.nombre_completo, correo=fila.correo)
+    return _usuario(fila)
 
 
 @router.post("/usuarios", response_model=Sesion, status_code=201)
